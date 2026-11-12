@@ -1,8 +1,8 @@
 # Informe de validación · motor de cálculo
 
-Hito 2. Generado con `npm run validacion` (archivo `src/engine/validacion.test.ts`).
-La suite completa tiene 97 pruebas y cubre el 100 % de las líneas y funciones de
-`src/engine/` (99,8 % de sentencias, 99,1 % de ramas).
+Se reproduce con `npm run validacion` (archivo `src/engine/validacion.test.ts`).
+La suite completa tiene 108 pruebas y cubre el 100 % de las líneas y funciones
+de `src/engine/` (99,8 % de sentencias, 99,1 % de ramas).
 
 ## Valores de control
 
@@ -67,3 +67,19 @@ Cada regla tiene al menos una prueba en `src/engine/decision.test.ts`.
 | `amina_severidad` | API RP 945 (literatura) | No |
 | `teg_severidad` | ISO 21457 §7.4.4 con umbrales de literatura | Parcial |
 | `cuni_proceso` | Práctica de selección (literatura) | No |
+
+## Comprobación de la interfaz
+
+Recorrido automático con Chromium sobre el sitio compilado, en 1280 px y 390 px
+de ancho.
+
+| Comprobación | Resultado |
+|---|---|
+| Las diez vistas cargan sin errores de consola | Sí |
+| Desborde horizontal de página en 390 px | Ninguno |
+| Elegir un equipo del diagrama con el teclado | Sí |
+| Condensador del regenerador en el Simulador | Recomienda titanio Gr 2; el 316L del inventario sale excluido |
+| Abrir en un navegador limpio la URL de un caso editado | Recupera el valor y lo marca con origen U |
+| Recargar sin hash | Recupera el caso desde localStorage |
+| Bajar el sobreespesor máximo a 4 mm en Criterios | El separador pasa de acero al carbono a overlay de Alloy 625 |
+| Reporte con las 27 piezas | 27 fichas; CSV, JSON y PDF generados |

@@ -26,6 +26,20 @@ export interface CondicionSello {
   /** % mol de H₂S en el gas */ yH2S_pct: number;
 }
 
+/** Condición del sello a partir de la entrada de la pieza (tipo de corriente y servicio agrio). */
+export function condicionSello(
+  e: { tipo: string; P: number; Tmax: number; Tmin: number; CO2: number; H2S: number; agua: string }, agrio: boolean,
+): CondicionSello {
+  const amina = e.tipo === 'amina_rica' || e.tipo === 'amina_pobre';
+  const hidrocarburo = ['hc_humedo', 'gas_humedo', 'gas_seco', 'gas_acido', 'vapor_acido', 'drenaje'].includes(e.tipo);
+  return {
+    Tmax_C: e.Tmax, Tmin_C: e.Tmin, P_bar: e.P, yCO2_pct: e.CO2, yH2S_pct: e.H2S,
+    gas: !['agua_agria', 'drenaje', 'agua_mar', 'servicio'].includes(e.tipo),
+    hidrocarburo, aromaticos: e.tipo === 'hc_humedo', alcalino: amina, metanol: false,
+    agua: e.agua !== 'no', h2s: agrio,
+  };
+}
+
 export type Aptitud = 'apto' | 'condicional' | 'no_apto';
 
 export interface ResultadoElastomero {
