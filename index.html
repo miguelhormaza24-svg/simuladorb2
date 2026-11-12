@@ -1,0 +1,1657 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Simulador B2 · Selección de materiales</title>
+<meta name="description" content="Simulador académico de selección de materiales para ocho equipos de la planta de gas B2 (UIS).">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&display=swap" rel="stylesheet">
+<style>:root{
+  --paper:#EDF1F3; --sheet:#FFFFFF; --ink:#14324A; --ink2:#3E5568; --mute:#6B7F8E; --rule:#C9D4DB; --rule2:#DFE6EA;
+  --gas:#1F5F8B; --liq:#B8650A; --amina:#2E7D4F; --teg:#6B4FA0; --acido:#B3261E; --serv:#6B7A86;
+  --ok:#2E7D4F; --okbg:#E3F1E8; --warn:#9A6A00; --warnbg:#FBF0D5; --bad:#B3261E; --badbg:#F8E1DF; --na:#8A98A3;
+  --focus:#1F5F8B;
+  --r1:3px; --r2:6px;
+  --font:"Archivo", "Segoe UI", system-ui, sans-serif;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--font);font-size:15px;line-height:1.5;font-variant-numeric:tabular-nums;
+  background-image:linear-gradient(var(--rule2) 1px,transparent 1px),linear-gradient(90deg,var(--rule2) 1px,transparent 1px);background-size:32px 32px;background-attachment:fixed}
+a{color:var(--gas)}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+h1,h2,h3,h4{font-weight:700;line-height:1.2;margin:0 0 .5em}
+h1{font-size:1.65rem;font-stretch:85%;letter-spacing:-.01em}
+h2{font-size:1.3rem;font-stretch:88%}
+h3{font-size:1.05rem}
+h4{font-size:.95rem}
+p{margin:0 0 .8em;max-width:78ch}
+small,.small{font-size:.82rem;color:var(--mute)}
+
+/* ----- cabecera / título de plano ----- */
+.top{background:var(--ink);color:#fff;border-bottom:4px solid var(--gas)}
+.top-in{max-width:1320px;margin:0 auto;padding:14px 20px 0;display:flex;gap:24px;align-items:flex-end;flex-wrap:wrap}
+.brand{display:flex;gap:14px;align-items:center;padding-bottom:12px}
+.brand-mark{width:42px;height:42px;border:2px solid #fff;border-radius:50%;display:grid;place-items:center;font-weight:800;font-stretch:80%;font-size:1.05rem}
+.brand h1{margin:0;font-size:1.25rem;color:#fff}
+.brand p{margin:0;color:#B9CBD8;font-size:.82rem}
+nav.tabs{display:flex;gap:2px;overflow-x:auto;margin-left:auto;scrollbar-width:thin}
+nav.tabs a{color:#CFE0EC;text-decoration:none;padding:9px 13px;border-radius:var(--r2) var(--r2) 0 0;white-space:nowrap;font-size:.9rem;font-weight:500}
+nav.tabs a:hover{background:rgba(255,255,255,.08);color:#fff}
+nav.tabs a[aria-current=page]{background:var(--paper);color:var(--ink);font-weight:700}
+
+main{max-width:1320px;margin:0 auto;padding:22px 20px 60px}
+.sheet{background:var(--sheet);border:1px solid var(--rule);border-radius:var(--r2);padding:18px 20px;margin-bottom:18px}
+.sheet>h2:first-child,.sheet>h3:first-child{margin-top:0}
+.lede{font-size:1.02rem;color:var(--ink2)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+@media (max-width:980px){.grid2,.grid3{grid-template-columns:1fr}}
+
+/* ----- diagrama ----- */
+.flow{width:100%;height:auto;display:block}
+.flow .node rect{fill:#fff;stroke:var(--ink);stroke-width:1.6}
+.flow .node{cursor:pointer}
+.flow .node:hover rect,.flow .node:focus rect{fill:#EAF2F8;stroke-width:2.4}
+.flow .node.sel rect{fill:#DDEBF5;stroke:var(--gas);stroke-width:3}
+.flow .node text{fill:var(--ink);font-size:13px;font-weight:600}
+.flow .node .num{fill:#fff;font-size:11px;font-weight:700}
+.flow .node circle{fill:var(--ink)}
+.flow .halo{fill:none;stroke:#fff;stroke-width:8}
+.flow .ln{fill:none;stroke-width:2.6;stroke-linejoin:round}
+.flow .flowing{fill:none;stroke:#fff;stroke-opacity:.85;stroke-width:1.3;stroke-dasharray:2 16;stroke-linecap:round;animation:dash 1.4s linear infinite}
+.flow .lbl{paint-order:stroke;stroke:#fff;stroke-width:3px}
+@keyframes dash{to{stroke-dashoffset:-36}}
+@media (prefers-reduced-motion:reduce){.flow .flowing{display:none}}
+.flow .lbl{font-size:11.5px;font-weight:700}
+.flow .lbl2{font-size:10.5px;fill:var(--mute)}
+.flow .off rect{fill:var(--paper);stroke:var(--rule);stroke-dasharray:4 3}
+.flow .off text{fill:var(--mute);font-size:11px}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:.82rem;color:var(--ink2);margin-top:6px}
+.legend i{display:inline-block;width:22px;height:3px;vertical-align:middle;margin-right:6px;border-radius:2px}
+
+/* ----- tablas ----- */
+table{border-collapse:collapse;width:100%;font-size:.88rem}
+th,td{text-align:left;padding:7px 9px;border-bottom:1px solid var(--rule2);vertical-align:top}
+th{font-weight:600;color:var(--ink2);background:#F5F8FA;border-bottom:1px solid var(--rule)}
+tr.click{cursor:pointer}
+tr.click:hover td{background:#F2F7FB}
+.tw{overflow-x:auto}
+td.num,th.num{text-align:right}
+
+/* ----- etiquetas de origen ----- */
+.tag{display:inline-block;min-width:17px;padding:0 4px;border-radius:3px;font-size:.68rem;font-weight:700;text-align:center;line-height:16px;vertical-align:1px;margin-left:4px;cursor:help}
+.tag-D{background:#DCE9F3;color:var(--gas)}
+.tag-I{background:#E6E2F1;color:var(--teg)}
+.tag-S{background:#FBEED3;color:#8A5A00}
+.tag-P{background:#F6DCD9;color:var(--acido)}
+.tag-U{background:var(--ink);color:#fff}
+.chip{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:20px;font-size:.78rem;font-weight:600;border:1px solid currentColor;margin:2px 3px 2px 0;white-space:nowrap}
+.c-gas{color:var(--gas)}.c-liq{color:var(--liq)}.c-amina{color:var(--amina)}.c-teg{color:var(--teg)}.c-acido{color:var(--acido)}.c-serv{color:var(--serv)}
+.st{display:inline-block;padding:1px 8px;border-radius:3px;font-size:.78rem;font-weight:700}
+.st-ok{background:var(--okbg);color:var(--ok)}
+.st-warn{background:var(--warnbg);color:var(--warn)}
+.st-bad{background:var(--badbg);color:var(--bad)}
+.st-na{background:#EEF1F3;color:var(--na)}
+
+/* ----- botones ----- */
+.btn{border:1px solid var(--ink);background:#fff;padding:7px 14px;border-radius:var(--r2);cursor:pointer;font-weight:600;font-size:.88rem}
+.btn:hover{background:#EEF4F8}
+.btn.pri{background:var(--ink);color:#fff}
+.btn.pri:hover{background:#21486A}
+.btn.sm{padding:4px 10px;font-size:.8rem}
+.btns{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.seg button{border:1px solid var(--rule);background:#fff;border-radius:var(--r2);padding:6px 11px;cursor:pointer;font-size:.86rem;text-align:left}
+.seg button b{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--ink);color:#fff;font-size:.72rem;margin-right:6px}
+.seg button[aria-pressed=true]{border-color:var(--gas);background:#E4EFF7;box-shadow:inset 0 0 0 1px var(--gas);font-weight:600}
+.seg button:hover{border-color:var(--ink2)}
+
+/* ----- simulador ----- */
+.simwrap{display:grid;grid-template-columns:360px 1fr;gap:18px;align-items:start}
+@media (max-width:1080px){.simwrap{grid-template-columns:1fr}}
+.form{position:sticky;top:10px;max-height:calc(100vh - 20px);overflow:auto}
+@media (max-width:1080px){.form{position:static;max-height:none}}
+.fgroup{border-top:1px solid var(--rule2);padding-top:10px;margin-top:10px}
+.fgroup>h4{margin-bottom:6px;color:var(--ink2)}
+.field{display:grid;grid-template-columns:1fr 120px;gap:8px;align-items:center;margin:5px 0}
+.field label{font-size:.85rem;color:var(--ink2)}
+.field input,.field select{width:100%;border:1px solid var(--rule);border-radius:var(--r1);padding:5px 7px;background:#fff;font-size:.88rem}
+.field input:focus,.field select:focus{border-color:var(--gas)}
+.check{display:flex;gap:8px;align-items:center;font-size:.85rem;margin:5px 0;color:var(--ink2)}
+.verdict{display:grid;grid-template-columns:1.2fr 1fr;gap:16px;border-left:6px solid var(--gas)}
+@media (max-width:760px){.verdict{grid-template-columns:1fr}}
+.verdict .big{font-size:1.5rem;font-weight:800;font-stretch:85%;line-height:1.15;margin:2px 0 4px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
+.kpi{border:1px solid var(--rule2);border-radius:var(--r2);padding:8px 10px}
+.kpi .v{font-size:1.15rem;font-weight:700}
+.kpi .l{font-size:.76rem;color:var(--mute)}
+.bar{height:8px;background:#E7EDF1;border-radius:4px;overflow:hidden;min-width:70px}
+.bar>i{display:block;height:100%;background:var(--gas)}
+.bar.t>i{background:var(--ink)}
+ul.tight{margin:4px 0 8px;padding-left:18px}
+ul.tight li{margin:2px 0}
+.mono{font-family:ui-monospace,Consolas,monospace;font-size:.85em}
+.note{border-left:3px solid var(--rule);padding:4px 10px;color:var(--ink2);font-size:.86rem;background:#F7F9FA;margin:8px 0}
+.note.warn{border-color:var(--warn);background:var(--warnbg)}
+.note.bad{border-color:var(--bad);background:var(--badbg)}
+.note.ok{border-color:var(--ok);background:var(--okbg)}
+details{border:1px solid var(--rule2);border-radius:var(--r2);padding:6px 10px;margin:6px 0;background:#fff}
+details summary{cursor:pointer;font-weight:600}
+.chart{width:100%;height:auto}
+.chart text{font-size:11px;fill:var(--ink2)}
+.excl td{color:var(--mute)}
+.excl .bar>i{background:#B8C4CC}
+.eqcard{border:1px solid var(--rule);border-radius:var(--r2);background:#fff;padding:12px 14px;cursor:pointer;text-align:left;width:100%}
+.eqcard:hover{border-color:var(--ink2)}
+.eqcard[aria-pressed=true]{border-color:var(--gas);box-shadow:inset 0 0 0 1px var(--gas)}
+.eqcard h3{margin:0 0 4px}
+.eqcard .n{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--ink);color:#fff;font-size:.8rem;margin-right:6px;font-weight:700}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:9px 16px;border-radius:var(--r2);font-size:.88rem;opacity:0;pointer-events:none;transition:opacity .2s}
+.toast.on{opacity:1}
+.foot{max-width:1320px;margin:0 auto;padding:0 20px 30px;color:var(--mute);font-size:.8rem}
+
+/* ----- reporte e impresión ----- */
+.report h2{border-bottom:2px solid var(--ink);padding-bottom:4px;margin-top:22px}
+.report h3{margin-top:14px}
+@media print{
+  body{background:#fff}
+  .top,.noprint,.foot{display:none!important}
+  main{padding:0;max-width:none}
+  .sheet{border:none;padding:0}
+  .report h2{page-break-before:auto}
+  .report section{page-break-inside:avoid}
+}
+
+.sheet .kpis + h3{margin-top:20px}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-in">
+ <div class="brand"><div class="brand-mark">B2</div><div><h1>Simulador de selección de materiales</h1><p>Planta de proceso de gas en tierra · Selección de materiales · UIS 2026</p></div></div>
+ <nav class="tabs" aria-label="Secciones"></nav>
+</div></header>
+<main></main>
+<footer class="foot">Herramienta académica de consulta y evaluación preliminar. No reemplaza cálculos certificados ni validación formal de ingeniería; no declara cumplimiento de ISO 15156. Datos: Informe de sistema B2 (Buitrago, Valencia, Rozo, Hormaza, Rivera).</footer>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script>
+/* =====================================================================
+   DATOS DEL SIMULADOR B2 · Selección de materiales
+   Fuente principal: Informe de sistema B2 (inventario, Tabla 20 corrientes,
+   Tabla 22 cribado). Etiquetas de origen del dato:
+     D = dato del escenario B (Tabla 3 del informe)
+     I = inventario / inferido del informe
+     S = supuesto (S1 de interfaz o valor didáctico típico)
+     P = pendiente (valor provisional solo para que el simulador calcule)
+   ===================================================================== */
+
+const ESCENARIO = [
+  ["Fluido", "Gas y condensado"],
+  ["Presión de cabezal (B1)", "320 bar (no es la presión de llegada a B2)"],
+  ["Presión de diseño planta (Nivel B)", "50 bar [S1, por confirmar en acta B1–B2]"],
+  ["Temperatura operación / máxima", "95 / 120 °C"],
+  ["CO₂ en fase gas", "1,8 % molar"],
+  ["H₂S en fase gas", "1,4 % molar"],
+  ["Cloruros agua de formación", "28 000 mg/L desde el año 8"],
+  ["pH del agua condensada", "3,9"],
+  ["Sólidos", "No previstos inicialmente"],
+  ["Inhibidor de hidratos", "MEG, inyección continua"],
+  ["Ambiente externo", "Atmosférico marino (planta costera, La Guajira)"],
+  ["Vida de diseño", "25 años"]
+];
+
+/* ---------------------------------------------------------------------
+   CORRIENTES (solo las que tocan los 8 equipos del alcance)
+   tipo: hc_humedo | agua_agria | gas_humedo | amina_rica | amina_pobre |
+         gas_acido | teg | vapor_acido | drenaje | gas_seco
+   Cada valor numérico: [valor, etiqueta]
+   --------------------------------------------------------------------- */
+const STREAMS = {
+  C01: { nombre: "Alimentación multifásica", fase: "Gas, condensado y agua agria (+ MEG de B1)", tipo: "hc_humedo", color: "gas",
+    P: [50, "S"], T: [95, "D"], Tmax: [120, "D"], Tmin: [5, "S"], H2S: [1.4, "D"], CO2: [1.8, "D"],
+    agua: ["si", "D"], pH: [3.9, "D"], Cl: [28000, "D"], wAgua: [100, "P"],
+    nota: "320 bar es presión de CABEZAL B1; la planta usa Pd = 50 bar (S1). Cl⁻ de 28 000 mg/L aplica desde el año 8. Hay MEG continuo de B1, pero su proporción en el agua no está definida: el simulador no le da crédito (100 % agua) hasta tener el dato.",
+    material: "Acero sour/HIC en línea y recipientes, según agua." },
+  C02: { nombre: "Gas húmedo agrio", fase: "Gas con vapor de agua, posible arrastre", tipo: "gas_humedo", color: "gas",
+    P: [50, "S"], T: [95, "S"], Tmax: [120, "S"], Tmin: [5, "S"], H2S: [1.4, "I"], CO2: [1.8, "I"],
+    agua: ["condensa", "P"], pH: [3.9, "D"], Cl: [600, "S"],
+    nota: "La separación quita líquido a granel, no seca ni endulza. Cl⁻ = 600 mg/L es el valor inicial de ISO 21457 6.2.3.2 para agua condensada.",
+    material: "API 5L/A106 sour candidato." },
+  C03: { nombre: "Condensado sin estabilizar", fase: "Hidrocarburo líquido; posible agua", tipo: "hc_humedo", color: "liq",
+    P: [50, "S"], T: [95, "S"], Tmax: [120, "S"], Tmin: [5, "S"], H2S: [1.4, "I"], CO2: [1.8, "I"],
+    agua: ["posible", "P"], pH: [3.9, "P"], Cl: [28000, "P"],
+    nota: "Para CO₂ se usa el contenido y la presión de la última separación (ISO 21457 6.2.3.2). El pH 3,9 aplica a la fase acuosa, no al hidrocarburo.",
+    material: "A106/SA-516 candidato." },
+  C04: { nombre: "Agua producida / agria", fase: "Fase acuosa con sales y gases disueltos", tipo: "agua_agria", color: "liq",
+    P: [50, "S"], T: [95, "S"], Tmax: [120, "S"], Tmin: [5, "S"], H2S: [1.4, "I"], CO2: [1.8, "I"],
+    agua: ["si", "D"], pH: [3.9, "D"], Cl: [28000, "D"],
+    nota: "pH y H₂S/CO₂ disueltos en la salida no medidos; MEG por confirmar con B1.",
+    material: "Acero sour revestido o alternativa por corrosión." },
+  "C05-R": { nombre: "Amina rica", fase: "Amina acuosa cargada con gas ácido", tipo: "amina_rica", color: "amina",
+    P: [50, "S"], T: [60, "S"], Tmax: [100, "S"], Tmin: [5, "S"], H2S: [1.4, "I"], CO2: [1.8, "I"],
+    agua: ["si", "I"], pH: [9.0, "S"], Cl: [0, "P"],
+    amina: { tipo: "MDEA", conc: 45, carga: 0.45, vel: 1.0, hss: 1.0 },
+    nota: "Tipo de amina, % amina, carga ácida, velocidad y HSS sin dato: valores típicos para que el simulador calcule.",
+    material: "A106/SA-516 con control de química, candidato." },
+  "C05-P": { nombre: "Amina pobre", fase: "Amina acuosa regenerada", tipo: "amina_pobre", color: "amina",
+    P: [2, "S"], T: [120, "S"], Tmax: [130, "S"], Tmin: [5, "S"], H2S: [0.01, "S"], CO2: [0.01, "S"],
+    agua: ["si", "I"], pH: [10.5, "S"], Cl: [0, "P"],
+    amina: { tipo: "MDEA", conc: 45, carga: 0.01, vel: 1.5, hss: 1.0 },
+    nota: "Más caliente aguas arriba del enfriador; T de película y carga residual sin dato.",
+    material: "A106/SA-516; internos inox solo justificados." },
+  C06: { nombre: "Gas ácido de aminas", fase: "H₂S/CO₂ con vapor de agua", tipo: "gas_acido", color: "acido",
+    P: [1.8, "S"], T: [45, "S"], Tmax: [110, "S"], Tmin: [5, "S"], H2S: [43.8, "I"], CO2: [56.2, "I"],
+    agua: ["condensa", "I"], pH: [4.0, "S"], Cl: [0, "P"],
+    nota: "Composición seca inferida de la relación H₂S/CO₂ de la alimentación (1,4 : 1,8). Condensa agua ácida en la cabeza.",
+    material: "Material sour según exposición húmeda." },
+  C07: { nombre: "Gas endulzado húmedo", fase: "Gas con H₂S/CO₂ reducidos; aún húmedo", tipo: "gas_humedo", color: "gas",
+    P: [50, "S"], T: [45, "S"], Tmax: [60, "S"], Tmin: [5, "S"], H2S: [0.0004, "S"], CO2: [0.1, "S"],
+    agua: ["condensa", "P"], pH: [4.5, "S"], Cl: [0, "P"],
+    nota: "Residual ácido sin dato: 4 ppmv H₂S y 0,1 % CO₂ son supuestos de especificación típica. Pruebe subir el H₂S residual.",
+    material: "A106 Gr B candidato condicionado." },
+  "C08-R": { nombre: "TEG rico", fase: "TEG que absorbió agua y contaminantes", tipo: "teg", color: "teg",
+    P: [50, "S"], T: [45, "S"], Tmax: [60, "S"], Tmin: [5, "S"], H2S: [0.0004, "S"], CO2: [0.1, "S"],
+    agua: ["si", "I"], pH: [7.0, "S"], Cl: [0, "P"],
+    teg: { Tpel: 60, contaminado: "no" },
+    nota: "5 m³/h es referencia, no dato del proyecto.",
+    material: "A106 Gr B; 316L localizado por química." },
+  "C08-P": { nombre: "TEG pobre caliente", fase: "TEG regenerado caliente", tipo: "teg", color: "teg",
+    P: [1.1, "S"], T: [200, "S"], Tmax: [204, "S"], Tmin: [5, "S"], H2S: [0.0, "S"], CO2: [0.0, "S"],
+    agua: ["no", "S"], pH: [7.0, "S"], Cl: [0, "P"],
+    teg: { Tpel: 215, contaminado: "no" },
+    nota: "T de película y concentración de TEG sin dato. 204 °C es el límite típico de rehervidor para evitar degradación térmica (literatura de proceso).",
+    material: "A106 Gr B; tubos 316L como candidato." },
+  "C09-V": { nombre: "Vapores de TEG (still)", fase: "Vapor de agua y gases; condensable", tipo: "vapor_acido", color: "acido",
+    P: [1.1, "S"], T: [100, "S"], Tmax: [110, "S"], Tmin: [5, "S"], H2S: [0.1, "S"], CO2: [2.0, "S"],
+    agua: ["condensa", "I"], pH: [4.5, "S"], Cl: [0, "P"],
+    nota: "P/T/composición/caudal sin dato. Vapor y drenaje no se evalúan como una sola fase.",
+    material: "A106 sour si condensa fase ácida." },
+  "C09-D": { nombre: "Drenajes cerrados TEG", fase: "Líquidos acuosos, TEG y trazas", tipo: "drenaje", color: "liq",
+    P: [1.5, "S"], T: [60, "S"], Tmax: [100, "S"], Tmin: [5, "S"], H2S: [0.1, "S"], CO2: [2.0, "S"],
+    agua: ["si", "I"], pH: [5.0, "S"], Cl: [1000, "P"],
+    nota: "Composición variable según origen: analizar cada ramal.",
+    material: "Acero compatible por subramal." },
+  C10: { nombre: "Gas seco / acondicionado", fase: "Gas tratado; posible condensación al enfriar", tipo: "gas_seco", color: "gas",
+    P: [50, "S"], T: [45, "S"], Tmax: [60, "S"], Tmin: [5, "S"], H2S: [0.0004, "S"], CO2: [0.1, "S"],
+    agua: ["no", "P"], pH: [4.5, "S"], Cl: [0, "P"], rocio: [-10, "S"],
+    nota: "Punto de rocío/residual ácido sin dato. Seco solo si el rocío está ≥ 10 °C por debajo de la T mínima (ISO 21457 6.2.3.5).",
+    material: "A106 Gr B candidato en servicio demostrado." },
+  MC: { nombre: "Medio de calentamiento (B3)", fase: "Vapor de baja presión o aceite térmico", tipo: "servicio", color: "serv",
+    P: [4, "P"], T: [150, "P"], Tmax: [160, "P"], Tmin: [5, "P"], H2S: [0, "P"], CO2: [0, "P"],
+    agua: ["no", "P"], pH: [9, "P"], Cl: [0, "P"],
+    nota: "El medio de calentamiento de los rehervidores no está definido en el informe: por acordar con B3.",
+    material: "Por definir con B3." },
+  "C13-F": { nombre: "Agua dulce de enfriamiento cerrada (B3, condicional)", fase: "Agua dulce tratada en circuito cerrado", tipo: "servicio", color: "serv",
+    P: [4, "P"], T: [35, "P"], Tmax: [45, "P"], Tmin: [20, "P"], H2S: [0, "P"], CO2: [0, "P"],
+    agua: ["si", "P"], pH: [8.5, "P"], Cl: [0, "P"],
+    nota: "Solo existe si B3 la asigna por acta; el caso base del enunciado es agua de mar clorada (C13-W).",
+    material: "Acero al carbono (A106/A53/SA-179) solo si se confirma." },
+  "C13-W": { nombre: "Agua de mar clorada (B3)", fase: "Agua de mar clorada, lado frío", tipo: "agua_mar", color: "serv",
+    P: [4, "P"], T: [35, "P"], Tmax: [45, "P"], Tmin: [20, "P"], H2S: [0, "P"], CO2: [0, "P"],
+    agua: ["si", "D"], pH: [8.1, "P"], Cl: [19000, "P"],
+    nota: "Cloro residual, T, O₂ y velocidad por acta B2–B3. El flujo de B2 indica que C13-W alimenta el enfriador de amina y condensadores.",
+    material: "Titanio Gr 2 / 6Mo en lado agua como opciones." }
+};
+
+/* Matriz de cribado (Tabla 22 del informe): P = potencial, V = por verificar, D = descarte condicionado */
+const MECH = {
+  C01: { P: "CO₂ húmedo, SSC/HIC; corrosión externa marina.", V: "Erosión, galvánica, MIC, SCC Cl⁻ (componentes inox).", D: "Agrietamiento por aminas: NA sin amina.", J: "Agua ácida y H₂S confirmados; cuantificar corrosión, revisar durezas y cloruros año 8." },
+  C02: { P: "CO₂ húmedo, SSC/HIC si hay fase acuosa.", V: "Erosión, MIC, SCC Cl⁻ por arrastre; TLC si el gas condensa en la parte superior de la línea.", D: "Agrietamiento por aminas: NA antes del absorbedor.", J: "La separación quita líquidos a granel, no seca ni endulza." },
+  C03: { P: "CO₂/H₂S con agua libre; depósitos.", V: "SSC/HIC, cloruros, erosión, MIC según agua y almacenamiento.", D: "Agrietamiento por aminas: NA sin contaminación.", J: "Distinguir condensado húmedo previo y producto estabilizado." },
+  C04: { P: "CO₂, SSC/HIC, corrosión localizada; depósitos.", V: "MIC, erosión, SCC Cl⁻ según material, O₂ y flujo.", D: "Agrietamiento por aminas: NA si no se mezcla amina.", J: "Cloruros de formación desde año 8; pH y contaminantes pendientes." },
+  "C05-R": { P: "Corrosión por amina/gas ácido; amine cracking; erosión-corrosión local.", V: "SSC/HIC, depósitos, cloruros y galvánica según química.", D: "No descartar galvánica solo por relación de áreas.", J: "La rica transporta gases ácidos; requiere API RP 945 y química de la amina." },
+  "C05-P": { P: "Agrietamiento por amina, corrosión química en puntos calientes.", V: "SCC Cl⁻ en 316L, depósitos, cavitación, SSC/HIC residual.", D: "No descartar SSC/HIC sin medir H₂S y fase acuosa.", J: "Concentración y calentamiento distintos de la amina rica." },
+  C06: { P: "Corrosión/SSC/HIC con condensado acuoso ácido.", V: "Depósitos, erosión, baja T por alivio; TLC si el gas condensa en la parte superior de la línea.", D: "Agrietamiento por aminas: NA en gas sin solución.", J: "Identificar enfriamiento y condensación de la línea de gas ácido." },
+  C07: { P: "CO₂/SSC/HIC si condensa agua.", V: "Arrastre de amina, erosión, cloruros y MIC; TLC si el gas condensa.", D: "Agrietamiento por aminas solo en contacto relevante con solución.", J: "Gas endulzado sigue húmedo antes de TEG; no descartes sin valores residuales." },
+  "C08-R": { P: "Corrosión por TEG contaminado, depósitos.", V: "SSC/HIC y cloruros si retiene H₂S/salmuera; erosión.", D: "Agrietamiento por aminas: NA sin amina.", J: "TEG rico contiene más agua; la baja velocidad supuesta no demuestra descarte de erosión." },
+  "C08-P": { P: "Degradación térmica/química del TEG; corrosión en zonas calientes.", V: "Cloruros/SCC 316L, depósitos, SSC/HIC si contaminado.", D: "Agrietamiento por aminas: NA sin amina.", J: "Control de T de película, pH y contaminantes." },
+  "C09-V": { P: "CO₂/H₂S húmedo si condensa agua.", V: "Depósitos, erosión, SSC/HIC, corrosión externa; TLC si el gas condensa.", D: "Agrietamiento por aminas: NA salvo contaminación.", J: "Vapor y drenaje NO se evalúan como una sola fase." },
+  "C09-D": { P: "CO₂/H₂S acuoso y depósitos en ramales contaminados.", V: "MIC, cloruros y corrosión galvánica según mezcla.", D: "No descartar sin analizar cada ramal.", J: "Definir segregación, pendientes, sellos y destino B3." },
+  C10: { P: "Bajo riesgo acuoso solo si se demuestra seco en todo régimen.", V: "Condensación en enfriador, erosión, SSC/HIC residual, baja T; TLC si el gas condensa.", D: "CO₂/SSC/HIC descartables solo con ausencia demostrada de agua.", J: "Punto de rocío, H₂S residual." },
+  "C13-W": { P: "Picadura/rendija, MIC, biofouling, corrosión por O₂.", V: "Galvánica, SCC Cl⁻ por material, erosión, depósitos.", D: "SSC/HIC por gas agrio: NA salvo contaminación cruzada.", J: "Agua de mar clorada: requiere cloro residual y temperatura B3." },
+  MC: { P: "Por definir con B3 (vapor: corrosión por condensado/O₂; aceite térmico: degradación).", V: "Química del medio, T de película.", D: "—", J: "Medio de calentamiento no definido en el informe." },
+  EXT: { P: "Corrosión atmosférica marina; CUI en equipos y líneas calientes aislados (rehervidores, regeneradores, líneas de amina y TEG).", V: "SCC por cloruros externo en inoxidables calientes; galvánica en soportes y tornillería.", D: "No descartar CUI en inoxidable 316L caliente bajo aislamiento.", J: "El escenario fija ambiente marino; la exposición se evalúa por equipo y ubicación." }
+};
+
+/* ---------------------------------------------------------------------
+   MATERIALES CANDIDATOS
+   pren: calculado con la Ec. (1) de ISO 21457 (Cr + 3,3(Mo+0,5W) + 16N) y
+         composición nominal típica (Anexo C de ISO 21457 da los rangos).
+   costo: índice relativo didáctico (acero al carbono = 1). Editable.
+   fab: facilidad de fabricación/soldadura y disponibilidad (0–10). Editable.
+   lim15156: límites ambientales ISO 15156-3 para servicio agrio
+             (norma NO adjunta: verificar contra el texto).
+   atmMar: límite T (°C) en atmósfera marina sin recubrimiento, ISO 21457 Tabla 3 (rango inferior).
+   aguaMar: T máx en agua de mar clorada con rendijas, ISO 21457 Tabla 10 (null = no listado).
+   formas: recipiente | boquilla | tuberia | internos | tubos
+   --------------------------------------------------------------------- */
+const MATERIALS = [
+  { id: "cs", nombre: "Acero al carbono sour/HIC", spec: "SA-516 Gr 70N · SA-105N · A106 Gr B · SA-179 (tubos)", familia: "CS",
+    comp: null, pren: null, costo: 1, fab: 10, formas: ["recipiente", "boquilla", "tuberia", "internos", "tubos"],
+    lim15156: { T: 999, pH2S: Infinity, nota: "Aceptable en todas las regiones SSC si cumple ISO 15156-2 Anexo A.2 (dureza ≤ 22 HRC / 250 HV, HIC si es placa)." },
+    atmMar: null, aguaMar: null, ref: "ISO 21457 7.2.1 (caso base), Tabla 4" },
+  { id: "cs_coat", nombre: "Acero al carbono + recubrimiento interno orgánico", spec: "SA-516 Gr 70N + epoxi/fenólico (± ánodos)", familia: "CS",
+    comp: null, pren: null, costo: 1.5, fab: 8, formas: ["recipiente"], tCoat: 90,
+    lim15156: { T: 999, pH2S: Infinity, nota: "El sustrato debe cumplir ISO 15156-2 igual que el acero desnudo." },
+    atmMar: null, aguaMar: null, ref: "ISO 21457 Tabla 4 (recipientes) y nota a: ánodos e inspección" },
+  { id: "cs_c316", nombre: "Acero al carbono + clad/overlay 316L", spec: "SA-516 Gr 70N + clad SA-264 / overlay ER316L", familia: "CLAD",
+    comp: { Cr: 17, Mo: 2.2, N: 0.05 }, costo: 3, fab: 6, formas: ["recipiente", "boquilla"],
+    lim15156: { T: 60, pH2S: 100, nota: "La capa de 316L debe cumplir ISO 15156-3 Tabla A.2 (60 °C; 100 kPa; cualquier Cl⁻/pH)." },
+    atmMar: null, aguaMar: null, ref: "ISO 21457 Tabla 4: CS con clad/overlay tipo 316" },
+  { id: "cs_c625", nombre: "Acero al carbono + overlay Alloy 625", spec: "SA-516 Gr 70N / SA-105N + overlay ERNiCrMo-3", familia: "CLAD",
+    comp: { Cr: 21.5, Mo: 9, N: 0 }, costo: 5, fab: 5, formas: ["recipiente", "boquilla"],
+    lim15156: { T: 232, pH2S: Infinity, nota: "Aleación Ni en solución sólida: sin límite práctico de pH₂S en el rango de B2 (verificar ISO 15156-3 Tabla A.14)." },
+    atmMar: null, aguaMar: 30, ref: "ISO 21457 Tabla 4: CS con overlay Alloy 625" },
+  { id: "ss316", nombre: "Inoxidable austenítico 316L", spec: "UNS S31603 · SA-240 / A312 / A213 TP316L", familia: "SS",
+    comp: { Cr: 17, Mo: 2.2, N: 0.05 }, costo: 4, fab: 9, formas: ["recipiente", "boquilla", "tuberia", "internos", "tubos"],
+    lim15156: { T: 60, pH2S: 100, nota: "ISO 15156-3 Tabla A.2: 60 °C; pH₂S ≤ 100 kPa; cualquier Cl⁻ y pH." },
+    atmMar: 50, aguaMar: null, ref: "ISO 21457 Tablas 4, 11; Tabla 3 (50–60 °C marino)" },
+  { id: "dss22", nombre: "Dúplex 22Cr (2205)", spec: "UNS S31803/S32205", familia: "DSS",
+    comp: { Cr: 22.5, Mo: 3.2, N: 0.17 }, costo: 5, fab: 7, formas: ["recipiente", "boquilla", "tuberia", "internos", "tubos"],
+    lim15156: { T: 232, pH2S: 10, nota: "ISO 15156-3 Tabla A.24 (30 ≤ PREN ≤ 40): 232 °C; pH₂S ≤ 10 kPa (1,5 psi)." },
+    atmMar: 80, aguaMar: null, ref: "ISO 21457 Tablas 4, 6; Tabla 3 (80–100 °C marino)" },
+  { id: "dss25", nombre: "Superdúplex 25Cr (2507)", spec: "UNS S32750/S32760 (PREN ≥ 40)", familia: "DSS",
+    comp: { Cr: 25, Mo: 3.8, N: 0.27 }, costo: 7, fab: 6, formas: ["recipiente", "boquilla", "tuberia", "internos", "tubos"],
+    lim15156: { T: 232, pH2S: 20, nota: "ISO 15156-3 Tabla A.24 (40 < PREN ≤ 45): 232 °C; pH₂S ≤ 20 kPa (3 psi)." },
+    atmMar: 90, aguaMar: 20, ref: "ISO 21457 Tablas 4, 10; Tabla 3 (90–110 °C marino)" },
+  { id: "mo6", nombre: "Austenítico 6Mo", spec: "UNS S31254 / N08367", familia: "SS",
+    comp: { Cr: 20, Mo: 6.1, N: 0.2 }, costo: 8, fab: 6, formas: ["boquilla", "tuberia", "internos", "tubos"],
+    lim15156: { T: 60, pH2S: 100, nota: "Valor conservador asumido igual al 316L; verificar límites de austeníticos altamente aleados en ISO 15156-3." },
+    atmMar: 100, aguaMar: 20, ref: "ISO 21457 Tablas 3, 10, 11" },
+  { id: "a625", nombre: "Alloy 625 sólido", spec: "UNS N06625", familia: "NI",
+    comp: { Cr: 21.5, Mo: 9, N: 0 }, costo: 15, fab: 5, formas: ["boquilla", "tuberia", "internos", "tubos"],
+    lim15156: { T: 232, pH2S: Infinity, nota: "Sin límite práctico de pH₂S en el rango de B2 (verificar ISO 15156-3 Tabla A.14)." },
+    atmMar: 999, aguaMar: 30, ref: "ISO 21457 Tablas 4, 10; Tabla 3 nota b" },
+  { id: "ti2", nombre: "Titanio Gr 2", spec: "ASTM B338 Gr 2 (tubos)", familia: "TI",
+    comp: null, pren: null, costo: 10, fab: 5, formas: ["tubos"],
+    lim15156: { T: 999, pH2S: Infinity, nota: "Uso previsto en el lado de agua de mar; no usar con protección catódica (ISO 21457 6.9.2) ni con mercurio (6.2.3.8)." },
+    atmMar: 999, aguaMar: 85, ref: "ISO 21457 Tabla 10 (85 °C), 7.4.3" }
+];
+
+/* ---------------------------------------------------------------------
+   EQUIPOS DEL ALCANCE (8) con piezas tomadas del inventario B2
+   forma: recipiente | boquilla | tuberia | internos | tubos | sello
+   --------------------------------------------------------------------- */
+const EQUIPOS = [
+  { id: "E1-REC", n: 1, etapa: 1, nombre: "Recibidor de líquidos (slug catcher)", corto: "Recibidor",
+    entradas: ["C01"], salidas: ["C01"],
+    funcion: "Recibe la alimentación multifásica después de la válvula de llegada y amortigua los tapones de líquido antes del separador.",
+    proceso: "separador", dim: { D: 1.2, L: 4.5, e: 35 },
+    piezas: [
+      { id: "cuerpo", nombre: "Cuerpo y cabezales", forma: "recipiente", corriente: "C01", inv: "cs", invTxt: "SA-516 Gr 70N con requisito sour/HIC y revestimiento local si aplica", dim: "Ø int. 1,2 m × L 4,5 m; e = 35 mm", cant: "1 cuerpo + 2 cabezales", norma: "ASME VIII-1; ISO 15156-2", ext: true },
+      { id: "boq", nombre: "Boquillas y registros", forma: "boquilla", corriente: "C01", inv: "cs", invTxt: "SA-105N / SA-350 LF2 con requisitos sour (candidato)", dim: "Entrada NPS 8; gas NPS 8; líquidos NPS 3; manway 18 in", cant: "4 boquillas + 1 manway", norma: "ASME VIII; ASME B16.5", ext: true, nps: "8-80" },
+      { id: "demister", nombre: "Demister y soporte interno", forma: "internos", corriente: "C01", inv: "ss316", invTxt: "Malla SS316L, validar cloruros y fase acuosa", dim: "Módulo Ø 0,9 m × 0,15 m", cant: "1", norma: "ASME VIII; ISO 21457" },
+      { id: "sellos", nombre: "Juntas y sellos elastoméricos", forma: "sello", corriente: "C01", invTxt: "No definido en inventario", dim: "Manway 18 in, instrumentos", cant: "Por P&ID", norma: "ISO 23936-2" }
+    ] },
+  { id: "E1-SEP", n: 2, etapa: 1, nombre: "Separador de entrada (trifásico)", corto: "Separador",
+    entradas: ["C01"], salidas: ["C02", "C03", "C04"],
+    funcion: "Separa gas húmedo (C02), condensado sin estabilizar (C03) y agua agria (C04).",
+    proceso: "separador", dim: { D: 1.8, L: 6.0, e: 45 },
+    piezas: [
+      { id: "virola", nombre: "Virola y cabezales (zona de agua)", forma: "recipiente", corriente: "C04", inv: "cs", invTxt: "SA-516 Gr 70N sour/HIC, sobreespesor 3 mm preliminar", dim: "Ø int. 1,8 m × L 6,0 m; e = 45 mm", cant: "1 cuerpo + 2 cabezales", norma: "ASME VIII-1; ISO 15156-2", ext: true, caInv: 3 },
+      { id: "internos", nombre: "Deflector y extractor de niebla", forma: "internos", corriente: "C01", inv: "ss316", invTxt: "Acero 316L / dúplex local si la corrosión lo exige", dim: "Deflector 600×500×8 mm; demister Ø 1,5 m × 150 mm", cant: "1 + 1", norma: "ISO 21457; ASME VIII" },
+      { id: "boq", nombre: "Boquillas y válvula de nivel", forma: "boquilla", corriente: "C04", inv: "cs", invTxt: "SA-105N sour para boquillas; trim CRA para válvula", dim: "Gas NPS 8; líquido NPS 3; agua NPS 2", cant: "5 boquillas + 2 válvulas", norma: "ASME B31.3; API 6D", ext: true, nps: "2-80" },
+      { id: "sellos", nombre: "Juntas y sellos (válvula de nivel, instrumentos)", forma: "sello", corriente: "C01", invTxt: "No definido en inventario", dim: "Empaques de vástago, O-rings", cant: "Por P&ID", norma: "ISO 23936-2; API 6A Anexo F (comparativa)" }
+    ] },
+  { id: "E2-ABS", n: 3, etapa: 2, nombre: "Absorbedor de aminas", corto: "Absorbedor",
+    entradas: ["C02", "C05-P"], salidas: ["C07", "C05-R"],
+    funcion: "Contacto gas–amina en contracorriente: remueve H₂S y CO₂ del gas húmedo agrio.",
+    proceso: "columna", dim: { D: 1.5, L: 14, e: 35 },
+    piezas: [
+      { id: "cuerpo", nombre: "Cuerpo, fondos y bridas (fondo con amina rica)", forma: "recipiente", corriente: "C05-R", inv: "cs", invTxt: "SA-516 Gr 70N sour/HIC; recubrimiento CRA solo si se justifica", dim: "Ø int. 1,5 m × H 14 m; e = 35 mm (estimado)", cant: "1 cuerpo + 2 cabezales", norma: "ASME VIII-1; API RP 945; ISO 15156", ext: true, T: 55, Tmax: 60 },
+      { id: "bandejas", nombre: "Bandejas o empaque y soportes", forma: "internos", corriente: "C05-R", inv: "ss316", invTxt: "SS316L", dim: "18 bandejas; Ø 1,45 m; separación 0,55 m", cant: "18 + soportes", norma: "API RP 945; ISO 21457", T: 55, Tmax: 60 },
+      { id: "boq", nombre: "Boquillas y distribuidores (entrada de gas)", forma: "boquilla", corriente: "C02", inv: "cs", invTxt: "SA-105N sour + internos SS316L candidato", dim: "Gas NPS 8; amina NPS 3; salida gas NPS 8", cant: "6 boquillas + 2 distribuidores", norma: "ASME VIII; API RP 945", ext: true, nps: "8-80" },
+      { id: "sellos", nombre: "Juntas y sellos", forma: "sello", corriente: "C05-R", invTxt: "No definido en inventario", dim: "Manway, instrumentos de nivel", cant: "Por P&ID", norma: "ISO 23936-2" }
+    ] },
+  { id: "E2-REG", n: 4, etapa: 2, nombre: "Regenerador de aminas", corto: "Regenerador amina",
+    entradas: ["C05-R"], salidas: ["C06", "C05-P"],
+    funcion: "Despoja el gas ácido de la amina rica caliente; la cabeza entrega gas ácido (C06) y el fondo amina pobre (C05-P).",
+    proceso: "columna", dim: { D: 1.2, L: 11, e: 18 },
+    piezas: [
+      { id: "cuerpo", nombre: "Cuerpo y fondos", forma: "recipiente", corriente: "C05-R", inv: "cs", invTxt: "SA-516 Gr 70N con control SCC amina", dim: "Ø int. 1,2 m × H 11 m; e = 18 mm", cant: "1", norma: "ASME VIII-1; API RP 945", ext: true, P: 2, T: 115 },
+      { id: "bandejas", nombre: "Bandejas y soporte", forma: "internos", corriente: "C05-R", inv: "ss316", invTxt: "SS316L o material de empaque compatible", dim: "16 bandejas Ø 1,15 m", cant: "16", norma: "API RP 945; ISO 21457", P: 2, T: 115 },
+      { id: "cabeza", nombre: "Cabeza: recipiente de reflujo y línea de gas ácido", forma: "recipiente", corriente: "C06", inv: "cs", invTxt: "SA-516 Gr 70N carcasa", dim: "Vaso Ø 0,9 × 2,5 m", cant: "1", norma: "TEMA; ASME VIII; API RP 945", ext: true, T: 45, Tmax: 60 },
+      { id: "cond", nombre: "Condensador de cabeza: tubos", forma: "tubos", corriente: "C06", servicio: "C13-W", inv: "ss316", invTxt: "Tubos SS316L candidato (lado agua según acta B2–B3)", dim: "Condensador Ø 0,55 × 3 m", cant: "1", norma: "TEMA; ASME VIII; ISO 21457 7.2.2" },
+      { id: "sellos", nombre: "Juntas y sellos", forma: "sello", corriente: "C05-R", invTxt: "No definido en inventario", dim: "Bridas de cabeza, instrumentos", cant: "Por P&ID", norma: "ISO 23936-2" }
+    ] },
+  { id: "E2-REH", n: 5, etapa: 2, nombre: "Rehervidor de aminas", corto: "Rehervidor amina",
+    entradas: ["C05-P", "MC"], salidas: ["C05-P"],
+    funcion: "Suministra el calor de despojo al fondo del regenerador; zona más caliente del circuito de amina.",
+    proceso: "hx", dim: { D: 0.9, L: 3.5, e: 20 },
+    piezas: [
+      { id: "carcasa", nombre: "Carcasa / cuerpo (lado amina)", forma: "recipiente", corriente: "C05-P", inv: "cs", invTxt: "SA-516 Gr 70N con diseño térmico y control SCC", dim: "Ø 0,9 m × L 3,5 m; e = 20 mm", cant: "1", norma: "ASME VIII; TEMA; API RP 945", ext: true, T: 125 },
+      { id: "tubos", nombre: "Tubos calefactores", forma: "tubos", corriente: "C05-P", servicio: "MC", inv: "ss316", invTxt: "SS316L candidato; verificar temperatura de película", dim: "¾ in OD × 3,5 m × 150 tubos", cant: "150", norma: "TEMA; ASTM A213; API RP 945", T: 135 },
+      { id: "sellos", nombre: "Juntas de canal y carcasa", forma: "sello", corriente: "C05-P", invTxt: "No definido en inventario", dim: "Juntas de cabezal", cant: "Por diseño", norma: "ISO 23936-2" }
+    ] },
+  { id: "E2-HX", n: 6, etapa: 2, nombre: "Intercambiador amina rica/pobre", corto: "Interc. rica/pobre",
+    entradas: ["C05-R", "C05-P"], salidas: ["C05-R", "C05-P"],
+    funcion: "Precalienta la amina rica con la amina pobre caliente; la salida caliente de la rica es el punto crítico (flashing de gas ácido).",
+    proceso: "hx", dim: { D: 0.7, L: 4, e: 16 },
+    piezas: [
+      { id: "carcasa", nombre: "Carcasa (lado amina pobre)", forma: "recipiente", corriente: "C05-P", inv: "cs", invTxt: "SA-516 Gr 70N con evaluación de amina", dim: "Ø 0,7 m × L 4 m; e = 16 mm", cant: "1", norma: "TEMA; ASME VIII; API RP 945", ext: true, P: 6, T: 120 },
+      { id: "tubos", nombre: "Haz tubular (amina rica caliente)", forma: "tubos", corriente: "C05-R", servicio: "C05-P", inv: "ss316", invTxt: "SS316L en tubos (candidato sujeto a fluido)", dim: "Tubos ¾ in OD × 4 m × 180", cant: "180 tubos", norma: "ASTM A213/A269; TEMA; API RP 945", P: 6, T: 95 },
+      { id: "placa", nombre: "Placas tubulares", forma: "recipiente", corriente: "C05-R", inv: "cs_c316", invTxt: "Placa SA-516 con revestimiento", dim: "2 placas", cant: "2", norma: "TEMA; ASME VIII", P: 6, T: 95 },
+      { id: "sellos", nombre: "Juntas de canal y carcasa", forma: "sello", corriente: "C05-R", invTxt: "No definido en inventario", dim: "Juntas de cabezal", cant: "Por diseño", norma: "ISO 23936-2" }
+    ] },
+  { id: "E3-CON", n: 7, etapa: 3, nombre: "Contactor de TEG", corto: "Contactor TEG",
+    entradas: ["C07", "C08-P"], salidas: ["C10", "C08-R"],
+    funcion: "Deshidrata el gas endulzado húmedo por contacto con TEG pobre; entrega gas seco (C10).",
+    proceso: "columna", dim: { D: 1.2, L: 10, e: 30 },
+    piezas: [
+      { id: "cuerpo", nombre: "Cuerpo, virola, fondos, boquillas y bridas", forma: "recipiente", corriente: "C07", inv: "cs", invTxt: "SA-516 Gr 70N / SA-105N; acero sour SSC/HIC si hay H₂S húmedo; overlay 316L solo localizado", dim: "Dimensiones por balance de proceso", cant: "1 recipiente", norma: "ASME VIII-1; ISO 21457; ISO 15156-1/-2", ext: true },
+      { id: "internos", nombre: "Bandejas, distribuidores, chimney tray y demister", forma: "internos", corriente: "C08-R", inv: "ss316", invTxt: "SA-240 TP316L / A276 316L; 2205 o 6Mo solo si se exceden límites del 316L", dim: "1 conjunto", cant: "1", norma: "ASME VIII-1; ISO 21457; ISO 15156-3" },
+      { id: "salida", nombre: "Línea de salida de gas deshidratado", forma: "tuberia", corriente: "C10", inv: "cs", invTxt: "ASTM A106 Gr B sin costura (condicionado a punto de rocío y ausencia de agua libre)", dim: "NPS 8 Sch 80; e = 12,70 mm", cant: "1 línea", norma: "ASME B31.3; ISO 21457; ISO 15156", ext: true, nps: "8-80" },
+      { id: "sellos", nombre: "Juntas y sellos", forma: "sello", corriente: "C07", invTxt: "No definido en inventario", dim: "Manway, instrumentos", cant: "Por P&ID", norma: "ISO 23936-2" }
+    ] },
+  { id: "E3-REG", n: 8, etapa: 3, nombre: "Regenerador de TEG (columna still + rehervidor)", corto: "Regenerador TEG",
+    entradas: ["C08-R", "MC"], salidas: ["C08-P", "C09-V", "C09-D"],
+    funcion: "Hierve el agua del TEG rico; la cabeza ventea vapores (C09-V) y el fondo devuelve TEG pobre caliente (C08-P).",
+    proceso: "columna", dim: { D: 0.4, L: 4, e: 10 },
+    piezas: [
+      { id: "cuerpo", nombre: "Columna still: cuerpo, fondos, boquillas", forma: "recipiente", corriente: "C09-V", inv: "cs", invTxt: "SA-516 Gr 70N; SA-105N. Overlay 316L localizado solo si el condensado lo justifica", dim: "Ø int. 0,40 m; 3 etapas (incl. rehervidor)", cant: "1 columna", norma: "ASME VIII-1; ISO 21457; ISO 15156", ext: true },
+      { id: "empaque", nombre: "Empaque/bandejas, distribuidor, demister", forma: "internos", corriente: "C09-V", inv: "ss316", invTxt: "SA-240 TP316L / A276 316L (condicionado); 2205/6Mo si no alcanza", dim: "1 conjunto", cant: "1", norma: "ASME VIII-1; ISO 21457; ISO 15156-3" },
+      { id: "venteo", nombre: "Venteo / overhead de la columna", forma: "tuberia", corriente: "C09-V", inv: "cs", invTxt: "ASTM A106 Gr B; 316L o dúplex solo si la corrosión lo justifica", dim: "NPS 2 Sch 40; e = 3,91 mm", cant: "1 interfaz", norma: "ASME B31.3; ISO 21457; ISO 15156", ext: true, nps: "2-40" },
+      { id: "reh_carc", nombre: "Rehervidor de TEG: carcasa y tubesheet", forma: "recipiente", corriente: "C08-P", inv: "cs", invTxt: "SA-516 Gr 70N; SA-105N. Overlay 316L en cara mojada solo si se justifica", dim: "Horizontal; Ø 0,90 m × L 3,50 m", cant: "1", norma: "ASME VIII-1; ISO 16812 / API 660; TEMA", ext: true },
+      { id: "reh_tubos", nombre: "Rehervidor de TEG: haz tubular", forma: "tubos", corriente: "C08-P", servicio: "MC", inv: "ss316", invTxt: "ASTM A213 TP316L sin costura (candidato)", dim: "¾ in OD × 3,0 m", cant: "1 haz", norma: "ASTM A213; ISO 16812; API 660" },
+      { id: "drenajes", nombre: "Puntos bajos y drenajes", forma: "tuberia", corriente: "C09-D", inv: "cs", invTxt: "A106 Gr B (TEG limpio); acero sour o CRA para condensados acuosos calientes", dim: "Ramales NPS 1½ Sch 80; e = 5,08 mm", cant: "1 red", norma: "ASME B31.3; ISO 21457", ext: true, nps: "1.5-80" },
+      { id: "sellos", nombre: "Juntas y sellos", forma: "sello", corriente: "C08-P", invTxt: "No definido en inventario", dim: "Bridas, instrumentos", cant: "Por P&ID", norma: "ISO 23936-2" }
+    ] }
+];
+
+/* Diámetros interiores (mm) para cálculos de velocidad: "NPS-Sch" */
+const PIPE_ID = { "8-80": 193.7, "4-80": 97.2, "3-80": 73.7, "2-80": 49.2, "2-40": 52.5, "1.5-80": 38.1 };
+
+/* ---------------------------------------------------------------------
+   ELASTÓMEROS — ISO 23936-2 Anexo C, Tabla C.1
+   resistencia: OK | C (podría servir, verificar) | NO
+   columnas: crudo, alcalino, MeOH, agua, H2S
+   --------------------------------------------------------------------- */
+const ELASTOMEROS = [
+  { id: "EPDM", tmax: 150, crudo: "NO", alc: "OK", meoh: "OK", agua: "OK", h2s: "OK", desc: "Bueno en agua y vapor; malo en hidrocarburos." },
+  { id: "CR", tmax: 100, crudo: "C", alc: "NO", meoh: "OK", agua: "OK", h2s: "C", desc: "Bueno en agua; cubierta de mangueras; buena intemperie." },
+  { id: "NBR", tmax: 120, crudo: "OK", alc: "OK", meoh: "OK", agua: "OK", h2s: "NO", desc: "Nitrilo; uso general; susceptible al envejecimiento." },
+  { id: "HNBR", tmax: 160, crudo: "OK", alc: "OK", meoh: "OK", agua: "OK", h2s: "C", desc: "Nitrilo hidrogenado: mejor envejecimiento térmico y químico. Aprobado por el grupo para E1-10 (B3)." },
+  { id: "FKM 1", tmax: 200, crudo: "OK", alc: "NO", meoh: "NO", agua: "OK", h2s: "C", desc: "Copolímero; el más especificado; malo en metanol y fluidos alcalinos." },
+  { id: "FKM 2", tmax: 200, crudo: "OK", alc: "NO", meoh: "OK", agua: "OK", h2s: "C", desc: "Terpolímero; grados de alto flúor buenos en metanol." },
+  { id: "FKM 3", tmax: 200, crudo: "OK", alc: "NO", meoh: "NO", agua: "OK", h2s: "C", desc: "Terpolímero de baja Tg; bajo flúor malo en metanol." },
+  { id: "FKM 5", tmax: 200, crudo: "OK", alc: "OK", meoh: "OK", agua: "OK", h2s: "C", desc: "Pentapolímero para fluidos alcalinos; poca información de desempeño." },
+  { id: "FEPM", tmax: 230, crudo: "C", alc: "OK", meoh: "OK", agua: "OK", h2s: "OK", desc: "TFE/P (Aflas); malo en aromáticos; bueno en H₂S, vapor y alcalinos; Tg alta." },
+  { id: "ETP", tmax: 200, crudo: "OK", alc: "OK", meoh: "OK", agua: "OK", h2s: "C", desc: "Terpolímero con etileno, desarrollado para resistencia alcalina." },
+  { id: "FFKM", tmax: 260, crudo: "OK", alc: "OK", meoh: "OK", agua: "OK", h2s: "OK", desc: "Perfluoroelastómero: 220–315 °C según curado; muy buena resistencia química; costo muy alto." }
+];
+
+/* Clases de temperatura: API 6A Tabla 2 = ISO 23936-2 Tabla A.6 */
+const TCLASES = [
+  { c: "K", min: -60, max: 82, test: "97, 112, 127" },
+  { c: "L", min: -46, max: 82, test: "97, 112, 127" },
+  { c: "P", min: -29, max: 82, test: "97, 112, 127" },
+  { c: "S", min: -18, max: 66, test: "81, 96, 111" },
+  { c: "T", min: -18, max: 82, test: "97, 112, 127" },
+  { c: "U", min: -18, max: 121, test: "136, 151, 166" },
+  { c: "V", min: 2, max: 121, test: "136, 151, 166" },
+  { c: "X", min: -18, max: 180, test: "195, 210, 225" },
+  { c: "Y", min: -18, max: 345, test: "No posible (ISO 23936-2)" }
+];
+
+/* ---------------------------------------------------------------------
+   CRITERIOS EDITABLES (cada uno con su fuente y si se verificó contra
+   una norma adjunta). El usuario puede cambiarlos en la pestaña Criterios.
+   --------------------------------------------------------------------- */
+const CRIT_DEFAULT = {
+  sourKPa:   { v: 0.3,  u: "kPa", t: "Umbral de servicio agrio pH₂S", src: "ISO 15156-2 §7.1.1 (0,3 kPa = 0,05 psi); API 6A A.4.2 remite a NACE MR0175", ver: "parcial" },
+  crInh:     { v: 0.1,  u: "mm/año", t: "Velocidad de corrosión inhibida", src: "ISO 21457 §8.1 Nota 1", ver: "si" },
+  caNoCorr:  { v: 1.5,  u: "mm", t: "Sobreespesor servicio no corrosivo", src: "ISO 21457 §8.2 a) 1,0–1,5 mm", ver: "si" },
+  caMild:    { v: 3.0,  u: "mm", t: "Sobreespesor servicio levemente corrosivo", src: "ISO 21457 §8.2 b)", ver: "si" },
+  caSevere:  { v: 6.0,  u: "mm", t: "Sobreespesor servicio severamente corrosivo (máximo aceptado para equipos)", src: "ISO 21457 §8.2 c)", ver: "si" },
+  dewMargin: { v: 10,   u: "°C", t: "Margen de punto de rocío para gas seco", src: "ISO 21457 §6.2.3.5", ver: "si" },
+  co2Slight: { v: 0.05, u: "MPa", t: "pCO₂ límite 'no corrosivo' (API 6A Tabla A.1)", src: "API 6A Tabla A.1", ver: "si" },
+  co2High:   { v: 0.21, u: "MPa", t: "pCO₂ límite 'moderado a alto' (API 6A Tabla A.1)", src: "API 6A Tabla A.1", ver: "si" },
+  ss316Cl:   { v: 60,   u: "°C", t: "T máx. 316L con agua clorurada (SCC sin H₂S)", src: "ISO 21457 §6.2.2.6 (cualitativo) + límite 60 °C de ISO 15156-3 Tabla A.2", ver: "parcial" },
+  rgdLow:    { v: 7,    u: "MPa", t: "Presión de gas desde la que crece el riesgo RGD", src: "ISO 23936-2 Tabla F.1 (7–14 MPa)", ver: "si" },
+  rgdHigh:   { v: 14,   u: "MPa", t: "Presión de gas con riesgo RGD alto", src: "ISO 23936-2 Tabla F.1", ver: "si" },
+  amTrica:   { v: 90,   u: "°C", t: "T de amina rica sobre la cual la corrosión por gas ácido liberado es alta", src: "Práctica de literatura (API RP 945 / API 571) — no adjunta", ver: "no" },
+  amCarga:   { v: 0.45, u: "mol/mol", t: "Carga ácida máxima de amina rica para acero al carbono (MDEA)", src: "Práctica de literatura — no adjunta", ver: "no" },
+  amVelCS:   { v: 1.5,  u: "m/s", t: "Velocidad máx. de amina rica en acero al carbono", src: "Práctica de literatura (API 571) — no adjunta", ver: "no" },
+  amHSS:     { v: 2.0,  u: "% p/p", t: "Sales termoestables (HSS) máximas", src: "Práctica de literatura — no adjunta", ver: "no" },
+  tegTmax:   { v: 204,  u: "°C", t: "T máx. de rehervidor/película de TEG (degradación)", src: "Literatura de proceso (GPSA) — no adjunta", ver: "no" },
+  cErosion:  { v: 100,  u: "—", t: "Constante C de velocidad erosional", src: "API RP 14E (no adjunta)", ver: "no" },
+  sAllow:    { v: 138,  u: "MPa", t: "Esfuerzo admisible SA-516 Gr 70", src: "ASME II-D Tabla 1A (verificar a la T de diseño)", ver: "no" },
+  wInteg:    { v: 45,   u: "%", t: "Peso del criterio integridad en el ranking", src: "Criterio del grupo", ver: "—" },
+  wCosto:    { v: 40,   u: "%", t: "Peso del criterio costo", src: "Criterio del grupo", ver: "—" },
+  wFab:      { v: 15,   u: "%", t: "Peso del criterio fabricación/disponibilidad", src: "Criterio del grupo", ver: "—" }
+};
+
+/* ---------------------------------------------------------------------
+   NORMAS (alcance de uso dentro del simulador)
+   --------------------------------------------------------------------- */
+const NORMAS = [
+  { cod: "ISO 21457:2010", tit: "Selección de materiales y control de corrosión para sistemas de producción de petróleo y gas", estado: "adjunta",
+    usos: [
+      "§6.2.2 Tabla 2: mecanismos por familia (CS vs CRA).",
+      "§6.2.2.4: requisitos de H₂S según ISO 15156; deshidratar o inhibir NO relaja el requisito sour.",
+      "§6.2.2.5: agrietamiento alcalino (aminas) → tratamiento térmico post-soldadura, CRA o recubrimiento.",
+      "§6.2.3.2: valores iniciales para agua condensada (pH 3,5; 600 mg/L Cl⁻) y uso de presión parcial/fugacidad.",
+      "§6.2.3.5: gas seco = rocío ≥ 10 °C bajo la T mínima.",
+      "§6.6.2 Tabla 3: límites de T de inoxidables sin recubrimiento en atmósfera marina.",
+      "§6.6.5: corrosión bajo aislamiento (CUI).",
+      "§6.7: requisitos para materiales poliméricos (remite a ISO 23936).",
+      "§7.2.1–7.2.3 Tabla 4: CS como caso base; CS + CA o CRA en gas húmedo; materiales típicos de recipientes.",
+      "§7.2.2: intercambiadores — sin sobreespesor en tubos de CS.",
+      "§7.4.3 Tabla 10: materiales para agua de mar clorada con rendijas (lado servicio de condensadores).",
+      "§7.4.4 Tabla 11: glicol → CS o 316.",
+      "§8.1 Nota 1: disponibilidad de inhibidor; CR inhibida 0,1 mm/año.",
+      "§8.2: sobreespesor 1–1,5 / 3 / 6 mm.",
+      "Ec. (1): PREN = Cr + 3,3(Mo + 0,5W) + 16N."
+    ] },
+  { cod: "ISO 23936-2:2011", tit: "Materiales no metálicos en contacto con fluidos de producción — Parte 2: Elastómeros", estado: "adjunta",
+    usos: [
+      "§7.2.2: criterios de aceptación de envejecimiento (dureza +10/−20; volumen +25/−5 %; tracción ±50 %).",
+      "§7.3.2 y Tabla B.4: RGD — ninguna sección con calificación > 3.",
+      "Anexo A, Tablas A.1–A.6: medios de envejecimiento (dulce/agrio) y clases de temperatura con temperaturas de ensayo.",
+      "Anexo B: RGD a 15 MPa, 100 °C, 2 MPa/min, 8 ciclos, O-ring 5,33 mm.",
+      "Anexo C, Tabla C.1: compatibilidad general de elastómeros.",
+      "Anexo F, Tabla F.1: variables de riesgo RGD (presión 7–14 MPa)."
+    ] },
+  { cod: "API 6A (19.ª ed., 2004) / ISO 10423", tit: "Equipos de cabeza de pozo y árbol de navidad", estado: "adjunta (referencia comparativa)",
+    usos: [
+      "Tabla 2: clases de temperatura K…Y.",
+      "Tabla 3: clases de material AA–HH (cuerpo y partes que controlan presión).",
+      "Tabla A.1: corrosividad relativa por pCO₂ (< 0,05; 0,05–0,21; > 0,21 MPa).",
+      "Anexo F, Tabla F.2: fluidos de ensayo de sellos no metálicos por clase de material.",
+      "Alcance: cabeza de pozo; en B2 se usa como referencia comparativa para válvulas y sellos, no como código de diseño de recipientes."
+    ] },
+  { cod: "ISO 23936-1", tit: "Materiales no metálicos — Parte 1: Termoplásticos", estado: "FALTA",
+    usos: ["El archivo adjunto con este nombre contiene en realidad ISO 21457:2010. Los datos de termoplásticos del simulador quedan como pendientes hasta tener la norma correcta."] },
+  { cod: "ISO 15156-2 / -3 (NACE MR0175)", tit: "Materiales para ambientes con H₂S", estado: "no adjunta",
+    usos: ["Umbral 0,3 kPa, Opción 1 (Anexo A.2) para aceros y límites ambientales de CRA (Tablas A.2, A.14, A.24). Valores tomados de la norma por referencia: verificar contra el texto."] },
+  { cod: "API RP 945 / API 571", tit: "Agrietamiento en unidades de amina / Mecanismos de daño", estado: "no adjunta",
+    usos: ["Criterios de amina (T, carga ácida, velocidad, HSS) marcados como 'literatura' y editables."] },
+  { cod: "ASME VIII-1 / ASME II-D", tit: "Recipientes a presión / Propiedades de materiales", estado: "no adjunta",
+    usos: ["Espesor requerido por presión interna (UG-27) para comparar con el inventario. S admisible editable."] }
+];
+
+/* Pendientes de información (para pedir a interfaces / profesor) */
+const PENDIENTES = [
+  "Presión real de llegada (acta B1–B2): el simulador usa Pd = 50 bar (S1).",
+  "Temperaturas de operación por equipo (balance de proceso): absorbedor, contactor y regeneradores usan valores típicos.",
+  "Tipo y concentración de amina, carga ácida y sales termoestables.",
+  "H₂S y CO₂ residuales del gas endulzado (C07/C10) y punto de rocío de entrega.",
+  "Medio de calentamiento de los rehervidores (vapor o aceite térmico) y temperatura de película.",
+  "Cloro residual, T y velocidad del agua de mar C13-W (acta B2–B3) para condensadores.",
+  "Norma ISO 23936-1 (termoplásticos): el archivo adjunto es ISO 21457.",
+  "ISO 15156-2/-3 para confirmar límites de CRA usados en el ranking."
+];
+
+/* =====================================================================
+   MOTOR DE CÁLCULO — funciones puras (se prueban con node)
+   ===================================================================== */
+
+const WET_ACID = ["hc_humedo", "agua_agria", "gas_humedo", "gas_acido", "vapor_acido", "drenaje"];
+const SOLUCION = ["amina_rica", "amina_pobre", "teg"];
+
+function critVals(crit) {
+  const o = {};
+  for (const k in crit) o[k] = typeof crit[k] === "object" ? Number(crit[k].v) : Number(crit[k]);
+  return o;
+}
+
+function computePREN(c) {
+  if (!c) return null;
+  return c.Cr + 3.3 * ((c.Mo || 0) + 0.5 * (c.W || 0)) + 16 * (c.N || 0);
+}
+
+/* Presiones parciales: P en bar abs, fracciones en % mol */
+function partialPressures(P, yH2S, yCO2, T) {
+  const pH2S_bar = P * yH2S / 100;
+  const pCO2_bar = P * yCO2 / 100;
+  const TK = T + 273.15;
+  // Coeficiente de fugacidad (de Waard–Milliams): log10(a) = P(0,0031 − 1,4/T)
+  const loga = Math.min(0, P * (0.0031 - 1.4 / TK));
+  const a = Math.pow(10, loga);
+  return {
+    pH2S_bar, pH2S_kPa: pH2S_bar * 100, pH2S_psia: pH2S_bar * 14.5038,
+    pCO2_bar, pCO2_MPa: pCO2_bar / 10, pCO2_psia: pCO2_bar * 14.5038,
+    fugCoef: a, fCO2: pCO2_bar * a,
+    ratio: pH2S_bar > 0 ? pCO2_bar / pH2S_bar : Infinity
+  };
+}
+
+/* de Waard–Milliams (1991/1993) con factor de película a alta T.
+   Devuelve mm/año. fCO2 en bar, T en °C. */
+function dwm(T, fCO2) {
+  if (!(fCO2 > 0)) return { vcr: 0, fs: 1, v: 0 };
+  const TK = T + 273.15;
+  const logv = 5.8 - 1710 / TK + 0.67 * Math.log10(fCO2);
+  const vcr = Math.pow(10, logv);
+  let logfs = 2400 / TK - 0.6 * Math.log10(fCO2) - 6.7;
+  const fs = Math.min(1, Math.pow(10, logfs));
+  return { vcr, fs, v: vcr * fs };
+}
+
+function regimenH2S(ratio) {
+  if (!isFinite(ratio)) return { k: "co2", t: "Dominado por CO₂ (sin H₂S)" };
+  if (ratio < 20) return { k: "h2s", t: "Dominado por H₂S (pCO₂/pH₂S < 20): película de FeS; el modelo de CO₂ tiende a sobreestimar la velocidad general, pero hay riesgo de picadura si la película se daña (ISO 21457 §6.2.2.2)." };
+  if (ratio <= 500) return { k: "mixto", t: "Régimen mixto CO₂/H₂S (20 ≤ pCO₂/pH₂S ≤ 500)." };
+  return { k: "co2", t: "Dominado por CO₂ (pCO₂/pH₂S > 500)." };
+}
+
+function tempClass(tmin, tmax) {
+  const cov = TCLASES.filter(c => c.c !== "R" && tmin >= c.min && tmax <= c.max);
+  if (!cov.length) return null;
+  cov.sort((a, b) => (a.max - a.min) - (b.max - b.min));
+  return cov[0];
+}
+
+function isWet(inp, cv) {
+  if (inp.tipo === "gas_seco") {
+    if (inp.agua === "si") return { wet: true, why: "Se indicó agua libre." };
+    const lim = inp.Tmin - cv.dewMargin;
+    if (inp.rocio <= lim) return { wet: false, why: `Rocío ${fmt(inp.rocio, 0)} °C ≤ Tmín − ${cv.dewMargin} = ${fmt(lim, 0)} °C → gas seco (ISO 21457 §6.2.3.5).` };
+    return { wet: true, why: `Rocío ${fmt(inp.rocio, 0)} °C > Tmín − ${cv.dewMargin} = ${fmt(lim, 0)} °C → NO se demuestra gas seco; se evalúa como húmedo.` };
+  }
+  if (inp.agua === "no") return { wet: false, why: "Se indicó sin agua libre." };
+  if (inp.agua === "si") return { wet: true, why: "Fase acuosa presente." };
+  return { wet: true, why: "Agua posible/condensable: se evalúa como húmeda hasta demostrar lo contrario (Tabla 23 del informe)." };
+}
+
+/* Severidad de amina (criterios de literatura, editables) */
+function amineSeverity(inp, cv) {
+  const a = inp.amina || {};
+  const f = [];
+  if (inp.tipo === "amina_rica") {
+    if (inp.T > cv.amTrica) f.push(`T ${fmt(inp.T, 0)} °C > ${cv.amTrica} °C: liberación de gas ácido (flashing)`);
+    if (a.carga > cv.amCarga) f.push(`Carga ácida ${fmt(a.carga, 2)} > ${cv.amCarga} mol/mol`);
+    if (a.vel > cv.amVelCS) f.push(`Velocidad ${fmt(a.vel, 1)} m/s > ${cv.amVelCS} m/s`);
+  } else {
+    if (inp.T > cv.amTrica + 20) f.push(`Zona caliente: T ${fmt(inp.T, 0)} °C > ${cv.amTrica + 20} °C`);
+    if (a.vel > 2 * cv.amVelCS) f.push(`Velocidad ${fmt(a.vel, 1)} m/s > ${2 * cv.amVelCS} m/s`);
+  }
+  if (a.hss > cv.amHSS) f.push(`HSS ${fmt(a.hss, 1)} % > ${cv.amHSS} %`);
+  const n = f.length;
+  return { n, nivel: n === 0 ? "baja" : n === 1 ? "moderada" : "alta", factores: f };
+}
+
+function tegSeverity(inp, cv) {
+  const t = inp.teg || {};
+  const f = [];
+  if (t.Tpel > cv.tegTmax) f.push(`T de película ${fmt(t.Tpel, 0)} °C > ${cv.tegTmax} °C: degradación térmica → ácidos orgánicos`);
+  if (t.contaminado === "si") f.push("TEG contaminado con H₂S/salmuera/hidrocarburo");
+  if (inp.pH < 6) f.push(`pH del TEG ${fmt(inp.pH, 1)} < 6 (TEG degradado/ácido)`);
+  const n = f.length;
+  return { n, nivel: n === 0 ? "baja" : n === 1 ? "moderada" : "alta", factores: f };
+}
+
+/* ---------------------------------------------------------------------
+   Evaluación principal de una pieza
+   inp: { forma, tipo, P, T, Tmax, Tmin, H2S, CO2, agua, pH, Cl, rocio,
+          amina, teg, inh, vida, ext, aislado, serv:{id,T,Tmax,Cl}|null,
+          caInv, aplica15156sol }
+   --------------------------------------------------------------------- */
+function evaluate(inp, crit) {
+  const cv = critVals(crit);
+  const r = { inp, notas: [] };
+  const pp = partialPressures(inp.P, inp.H2S, inp.CO2, inp.T);
+  r.pp = pp;
+  r.regimen = regimenH2S(pp.ratio);
+  r.sour = pp.pH2S_kPa >= cv.sourKPa;
+  const wet = isWet(inp, cv);
+  r.wet = wet;
+  const solucion = SOLUCION.includes(inp.tipo);
+  const wetAcid = WET_ACID.includes(inp.tipo) || (inp.tipo === "gas_seco" && wet.wet);
+
+  /* --- Corrosión por CO2 --- */
+  r.corr = { aplica: false };
+  if (wetAcid && wet.wet) {
+    const d = dwm(inp.T, pp.fCO2);
+    // Factor de glicol/MEG (de Waard, Lotz y Dugstad 1995): log F = 1,6(log W − 2), W = % agua en la fase acuosa
+    const W = Math.max(1, Math.min(100, inp.wAgua == null ? 100 : inp.wAgua));
+    const fgly = Math.min(1, Math.pow(10, 1.6 * (Math.log10(W) - 2)));
+    d.vsg = d.v; d.v = d.v * fgly; d.fgly = fgly;
+    const A = Math.max(0, Math.min(100, inp.inh)) / 100;
+    const crInh = Math.min(cv.crInh, d.v);
+    const crEff = A * crInh + (1 - A) * d.v;
+    const caReq = crEff * inp.vida;
+    r.corr = { aplica: true, modelo: "de Waard–Milliams (1991) con factor de película y de glicol", vcr: d.vcr, fs: d.fs, fgly: d.fgly, crBase: d.v, A, crEff, caReq };
+  } else if (inp.tipo === "gas_seco" || (wetAcid && !wet.wet)) {
+    r.corr = { aplica: false, seco: true, crEff: 0, caReq: 0, txt: "Sin fase acuosa: no hay corrosión electroquímica (ISO 21457 §6.2.3.5)." };
+  }
+  r.corr.clase = caClass(r.corr.caReq, cv, r.corr.aplica || r.corr.seco);
+
+  /* --- Severidad por solución --- */
+  if (inp.tipo === "amina_rica" || inp.tipo === "amina_pobre") r.amina = amineSeverity(inp, cv);
+  if (inp.tipo === "teg") r.teg = tegSeverity(inp, cv);
+
+  /* --- API 6A (comparativa) --- */
+  const corrLvl = pp.pCO2_MPa < cv.co2Slight ? 0 : pp.pCO2_MPa <= cv.co2High ? 1 : 2;
+  const corrTxt = ["no corrosivo", "levemente corrosivo", "moderado a altamente corrosivo"][corrLvl];
+  r.api6a = { corrLvl, corrTxt, tclase: tempClass(inp.Tmin, inp.Tmax) };
+
+  /* --- Materiales --- */
+  const ss316 = MATERIALS.find(m => m.id === "ss316");
+  const apply15156 = !solucion || inp.aplica15156sol;
+  const ssOutBy15156 = r.sour && apply15156 && wet.wet && (pp.pH2S_kPa > ss316.lim15156.pH2S || inp.Tmax > ss316.lim15156.T);
+  r.api6a.clase = r.sour ? (ssOutBy15156 && corrLvl >= 1 ? "HH" : ["DD", "EE", "FF"][corrLvl]) : ["AA", "BB", "CC"][corrLvl];
+  r.api6a.marca = r.sour ? `${r.api6a.clase}-[pH₂S máx. admisible del componente limitante, psia]` : r.api6a.clase;
+
+  r.mats = inp.forma === "sello" ? [] : MATERIALS.filter(m => m.formas.includes(inp.forma)).map(m => evalMaterial(m, inp, r, cv, { wetAcid, solucion, apply15156 }));
+  const viables = r.mats.filter(x => x.viable).sort((a, b) => b.total - a.total);
+  r.ranking = viables.concat(r.mats.filter(x => !x.viable).sort((a, b) => b.total - a.total));
+  r.mejor = viables[0] || null;
+
+  r.mecs = mechanisms(inp, r, cv);
+  return r;
+}
+
+function caClass(ca, cv, aplica) {
+  if (!aplica) return null;
+  if (ca <= cv.caNoCorr) return { k: 0, t: "No corrosivo", ca: cv.caNoCorr };
+  if (ca <= cv.caMild) return { k: 1, t: "Levemente corrosivo", ca: cv.caMild };
+  if (ca <= cv.caSevere) return { k: 2, t: "Severamente corrosivo", ca: cv.caSevere };
+  return { k: 3, t: "Excede el sobreespesor máximo", ca: null };
+}
+
+function evalMaterial(m, inp, r, cv, ctx) {
+  const o = { id: m.id, nombre: m.nombre, spec: m.spec, familia: m.familia, viable: true, excl: [], avisos: [], reqs: [], integ: 8 };
+  const pren = m.comp ? computePREN(m.comp) : null;
+  o.pren = pren;
+  const pp = r.pp;
+  const isCS = m.familia === "CS";
+  const thin = inp.forma === "tubos" || inp.forma === "internos";
+  const wet = r.wet.wet;
+
+  /* 1. ISO 15156 */
+  if (r.sour && wet) {
+    if (isCS) {
+      o.reqs.push("ISO 15156-2 Anexo A.2: dureza ≤ 22 HRC (250 HV) en metal base, ZAC y soldadura.");
+      if (inp.forma === "recipiente" || inp.forma === "tuberia") o.reqs.push("Ensayo HIC (NACE TM0284) para placa y tubería soldada; evaluar SOHIC.");
+    } else if (ctx.apply15156) {
+      const L = m.lim15156;
+      if (pp.pH2S_kPa > L.pH2S || inp.Tmax > L.T) {
+        o.viable = false;
+        o.excl.push(`Fuera de límites ISO 15156-3: pH₂S ${fmt(pp.pH2S_kPa, 1)} kPa / Tmáx ${fmt(inp.Tmax, 0)} °C vs. ${isFinite(L.pH2S) ? fmt(L.pH2S, 0) + " kPa" : "sin límite"} / ${L.T} °C.`);
+      } else {
+        o.reqs.push("Condición metalúrgica y dureza según ISO 15156-3 (" + L.nota + ")");
+      }
+    } else {
+      o.avisos.push("Límites ISO 15156-3 no aplicados a la solución (opción desactivada): justificar con experiencia o ensayo.");
+    }
+  } else if (r.sour && !wet) {
+    o.reqs.push("Sigue siendo servicio agrio aunque esté seco: ISO 21457 §6.2.2.4 no permite relajar el requisito por deshidratación o inhibición.");
+  }
+
+  /* 2. Corrosión interna según tipo de servicio */
+  if (ctx.wetAcid && wet) {
+    const c = r.corr;
+    if (isCS) {
+      if (m.id === "cs_coat") {
+        if (!["hc_humedo", "agua_agria", "gas_humedo", "drenaje"].includes(inp.tipo)) { o.viable = false; o.excl.push("Recubrimiento orgánico interno no típico en este servicio."); }
+        else if (inp.Tmax > m.tCoat) { o.viable = false; o.excl.push(`Tmáx ${fmt(inp.Tmax, 0)} °C > límite supuesto del recubrimiento (${m.tCoat} °C, confirmar con fabricante).`); }
+        else { o.integ = 6.5; o.reqs.push("Ánodos de sacrificio, inspección y reparación periódica del recubrimiento (ISO 21457 Tabla 4 nota a)."); o.avisos.push("Riesgo galvánico entre internos CRA y pared si se daña el recubrimiento (ISO 21457 §8.3)."); }
+      } else if (thin) {
+        if (c.caReq > 0.5) { o.viable = false; o.excl.push(`${inp.forma === "tubos" ? "Tubos" : "Internos"} de pared delgada sin sobreespesor disponible (ISO 21457 §7.2.2) con pérdida estimada de ${fmt(c.caReq, 1)} mm en la vida de diseño.`); }
+        else o.integ = 7;
+      } else if (c.clase && c.clase.k === 3) {
+        o.viable = false;
+        o.excl.push(`Sobreespesor requerido ${fmt(c.caReq, 1)} mm > ${cv.caSevere} mm (máximo de ISO 21457 §8.2).`);
+      } else if (c.clase) {
+        o.integ = [9, 7.5, 5][c.clase.k];
+        o.reqs.push(`Sobreespesor de corrosión: ${fmt(c.clase.ca, 1)} mm (${c.clase.t.toLowerCase()}, ISO 21457 §8.2).`);
+        if (inp.caInv != null && inp.caInv < c.caReq) o.avisos.push(`El sobreespesor del inventario (${fmt(inp.caInv, 1)} mm) es menor que el requerido (${fmt(c.caReq, 1)} mm).`);
+      }
+    } else {
+      o.integ = scorePren(pren, m, inp.Cl);
+    }
+  } else if (inp.tipo === "amina_rica" || inp.tipo === "amina_pobre") {
+    const s = r.amina;
+    if (isCS) {
+      if (m.id === "cs_coat") { o.viable = false; o.excl.push("Recubrimiento orgánico interno no típico en servicio de amina."); }
+      else {
+        o.reqs.push("Tratamiento térmico post-soldadura (PWHT) de soldaduras y conformados: agrietamiento alcalino por aminas (ISO 21457 §6.2.2.5; API RP 945).");
+        if (thin && s.n >= 1) { o.viable = false; o.excl.push(`Pared delgada sin sobreespesor con severidad de amina ${s.nivel}.`); }
+        else if (thin) { o.integ = 4.5; o.avisos.push("Pared delgada sin sobreespesor: vida limitada; lo usual es 316L en internos y tubos."); }
+        else if (s.n >= 2) { o.viable = false; o.excl.push(`Severidad de amina alta: ${s.factores.join("; ")}.`); }
+        else if (s.n === 1) { o.integ = 5.5; o.reqs.push(`Sobreespesor ${fmt(cv.caSevere, 1)} mm; 316L en puntos calientes/turbulentos.`); o.avisos.push("Severidad moderada: " + s.factores.join("; ")); }
+        else { o.integ = 8; o.reqs.push(`Sobreespesor ${fmt(cv.caMild, 1)} mm (servicio levemente corrosivo).`); }
+      }
+    } else {
+      o.integ = Math.min(10, scorePren(pren, m, inp.Cl) + 0.5);
+    }
+  } else if (inp.tipo === "teg") {
+    const s = r.teg;
+    if (isCS) {
+      if (m.id === "cs_coat") { o.viable = false; o.excl.push("Recubrimiento orgánico interno no típico en servicio de glicol."); }
+      else if (thin && s.n >= 1) { o.viable = false; o.excl.push(`Pared delgada sin sobreespesor con severidad TEG ${s.nivel}.`); }
+      else if (thin) { o.integ = 4.5; o.avisos.push("Pared delgada sin sobreespesor. ISO 21457 §7.4.4: el CS funciona en TEG, pero 316L es buena alternativa en intercambiadores y componentes críticos."); }
+      else if (s.n >= 2) { o.viable = false; o.excl.push("Severidad TEG alta: " + s.factores.join("; ")); }
+      else if (s.n === 1) { o.integ = 5.5; o.reqs.push(`Sobreespesor ${fmt(cv.caSevere, 1)} mm.`); o.avisos.push(s.factores.join("; ")); }
+      else { o.integ = 8.5; o.reqs.push(`Sobreespesor ${fmt(cv.caMild, 1)} mm y control químico del TEG (pH, inhibidor) (ISO 21457 §7.4.4).`); }
+    } else {
+      o.integ = Math.min(10, scorePren(pren, m, inp.Cl) + 0.5);
+    }
+  } else {
+    // seco / servicio no corrosivo
+    if (isCS) { o.integ = 9; if (m.id !== "cs_coat") o.reqs.push(`Sobreespesor ${fmt(cv.caNoCorr, 1)} mm (servicio no corrosivo, ISO 21457 §8.2 a).`); else { o.viable = false; o.excl.push("Recubrimiento innecesario en servicio seco."); } }
+    else o.integ = 9.5;
+  }
+
+  /* 3. SCC por cloruros sin H2S (inoxidables austeníticos) */
+  if ((m.id === "ss316" || m.id === "cs_c316") && wet && inp.Cl >= 1000 && inp.Tmax > cv.ss316Cl) {
+    if (o.viable) { o.viable = false; o.excl.push(`SCC por cloruros: Cl⁻ ${fmt(inp.Cl, 0)} mg/L con Tmáx ${fmt(inp.Tmax, 0)} °C > ${cv.ss316Cl} °C (ISO 21457 §6.2.2.6).`); }
+  } else if ((m.id === "ss316" || m.id === "cs_c316") && wet && inp.Cl >= 50 && inp.Tmax > cv.ss316Cl) {
+    o.avisos.push("Cloruros bajos con T > 60 °C: vigilar concentración por evaporación (ISO 21457 §6.2.2.6).");
+    o.integ -= 1;
+  }
+
+  /* 4. Lado servicio (tubos de intercambiadores) */
+  if (inp.serv && inp.forma === "tubos") {
+    if (inp.serv.id === "C13-W") {
+      const Ts = inp.serv.Tmax;
+      if (m.aguaMar == null) { o.viable = false; o.excl.push(`No listado para agua de mar clorada con rendijas (ISO 21457 Tabla 10); los SS no se usan con agua de mar en carcasa (§7.4.3).`); }
+      else if (m.aguaMar < Ts) { o.viable = false; o.excl.push(`Agua de mar clorada a ${fmt(Ts, 0)} °C > ${m.aguaMar} °C admisible (ISO 21457 Tabla 10).`); }
+      else o.reqs.push(`Lado agua de mar: apto hasta ${m.aguaMar} °C (ISO 21457 Tabla 10); evitar rosca/rendijas.`);
+    } else if (m.id === "ti2") {
+      o.avisos.push("El titanio se justifica sobre todo por el lado de agua de mar; aquí el lado servicio no la usa.");
+      o.integ -= 1.5;
+    }
+  } else if (m.id === "ti2") {
+    o.avisos.push("Titanio sin lado de agua de mar: costo difícil de justificar.");
+    o.integ -= 2;
+  }
+
+  /* 5. Exterior marino (inoxidables sólidos expuestos) */
+  if (inp.ext && ["SS", "DSS"].includes(m.familia) && ["recipiente", "tuberia", "boquilla"].includes(inp.forma)) {
+    if (inp.T > m.atmMar) {
+      o.avisos.push(`Atmósfera marina: T ${fmt(inp.T, 0)} °C > ${m.atmMar} °C (ISO 21457 Tabla 3) → recubrimiento externo o clad sobre CS (§7.2.3).`);
+      o.integ -= 1;
+    }
+  }
+  if (inp.ext && inp.aislado && inp.forma !== "internos" && inp.forma !== "tubos") {
+    o.avisos.push("Aislado y caliente: evaluar CUI y recubrimiento bajo aislamiento (ISO 21457 §6.6.5).");
+  }
+  if (["CLAD", "SS", "DSS", "NI"].includes(m.familia) && inp.forma !== "internos" && inp.forma !== "tubos") {
+    o.reqs.push("Conexión con tramos de CS: evaluar galvánica en la interfaz (ISO 21457 §8.7.1).");
+  }
+
+  o.integ = Math.max(0, Math.min(10, o.integ));
+  o.costo = m.costo;
+  o.sCosto = Math.max(0, 10 * (1 - Math.log(m.costo) / Math.log(20)));
+  o.sFab = m.fab;
+  const W = cv.wInteg + cv.wCosto + cv.wFab || 1;
+  o.total = (cv.wInteg * o.integ + cv.wCosto * o.sCosto + cv.wFab * o.sFab) / W;
+  return o;
+}
+
+/* Puntaje de integridad de CRA: con cloruros el PREN pesa mucho (picadura/rendija);
+   sin cloruros todas las CRA son adecuadas y el PREN solo desempata. */
+function scorePren(pren, m, Cl) {
+  if (m.familia === "TI") return 9;
+  if (pren == null) return 7;
+  if ((Cl || 0) < 50) return Math.max(8, Math.min(9.5, 8.5 + (pren - 24) / 27));
+  return Math.max(5, Math.min(10, 6 + (pren - 24) / 27 * 4));
+}
+
+/* Mecanismos de daño calculados para la pieza */
+function mechanisms(inp, r, cv) {
+  const L = [];
+  const wet = r.wet.wet;
+  const add = (mec, est, why) => L.push({ mec, est, why });
+  // CO2
+  if (r.corr.aplica) add("Corrosión por CO₂", r.corr.crBase > cv.crInh ? "activo" : "verificar", `Modelo: ${fmt(r.corr.crBase, 2)} mm/año sin inhibir.`);
+  else if (r.corr.seco) add("Corrosión por CO₂", "descartado", "Sin agua libre demostrada.");
+  else if (SOLUCION.includes(inp.tipo)) add("Corrosión por CO₂ (modelo de agua ácida)", "na", "No aplica el modelo a soluciones de amina/TEG.");
+  // SSC/HIC
+  if (r.sour && wet) add("SSC / HIC / SOHIC", "activo", `pH₂S = ${fmt(r.pp.pH2S_kPa, 2)} kPa ≥ ${cv.sourKPa} kPa con fase acuosa.`);
+  else if (r.sour) add("SSC / HIC / SOHIC", "verificar", "Agrio pero seco: el requisito de material se mantiene (ISO 21457 §6.2.2.4).");
+  else add("SSC / HIC / SOHIC", "descartado", `pH₂S = ${fmt(r.pp.pH2S_kPa, 3)} kPa < ${cv.sourKPa} kPa (región 0). Confirmar H₂S residual.`);
+  if (r.sour && r.regimen.k === "h2s" && wet) add("Picadura bajo película de FeS", "verificar", "Régimen dominado por H₂S (ISO 21457 §6.2.2.2).");
+  if (["gas_humedo", "gas_acido", "vapor_acido"].includes(inp.tipo) && wet) add("Corrosión de tope de línea (TLC)", "verificar", "Gas que condensa en flujo estratificado; los inhibidores no la mitigan (ISO 21457 §8.1).");
+  if (inp.tipo === "amina_rica" || inp.tipo === "amina_pobre") {
+    add("Agrietamiento alcalino por amina (ASCC)", "activo", "Acero al carbono soldado en amina: PWHT (ISO 21457 §6.2.2.5).");
+    add("Corrosión por amina / erosión-corrosión", r.amina.n ? "activo" : "verificar", r.amina.n ? r.amina.factores.join("; ") : "Sin factores de severidad con los datos actuales.");
+  } else add("Agrietamiento alcalino por amina (ASCC)", "na", "NA sin amina.");
+  if (inp.tipo === "teg") add("Degradación térmica/química del TEG", r.teg.n ? "activo" : "verificar", r.teg.n ? r.teg.factores.join("; ") : "T de película dentro del límite.");
+  if (wet && inp.Cl >= 50 && inp.Tmax > cv.ss316Cl) add("SCC por cloruros (inoxidables)", inp.Cl >= 1000 ? "activo" : "verificar", `Cl⁻ ${fmt(inp.Cl, 0)} mg/L, Tmáx ${fmt(inp.Tmax, 0)} °C.`);
+  if (["agua_agria", "drenaje", "hc_humedo"].includes(inp.tipo) && wet) add("MIC", "verificar", "Zonas muertas y bajo flujo (ISO 21457 §6.2.2.3).");
+  if (inp.serv && inp.serv.id === "C13-W") add("Picadura/rendija y biofouling (lado agua de mar)", "activo", "Agua de mar clorada (ISO 21457 Tabla 10).");
+  if (inp.ext) add("Corrosión externa marina" + (inp.aislado ? " / CUI" : ""), "activo", "Planta costera (ISO 21457 §6.6).");
+  if (inp.Tmin < 0) add("Fractura frágil a baja T", "verificar", "Verificar tenacidad a la T mínima de diseño / despresurización (ISO 21457 §6.9.1).");
+  return L;
+}
+
+/* ---------------------- Cálculos de proceso ---------------------- */
+function gasDensity(Pbar, T, MW, Z) {
+  return (Pbar * 1e5 * MW / 1000) / (Z * 8.314 * (T + 273.15));
+}
+function erosionalVelocity(rho, C) {
+  // API RP 14E: Ve[ft/s] = C/sqrt(rho[lb/ft3])
+  return 0.3048 * C / Math.sqrt(rho * 0.062428);
+}
+function nozzle(Qm3h, idmm, rho, C) {
+  const A = Math.PI / 4 * Math.pow(idmm / 1000, 2);
+  const v = Qm3h / 3600 / A;
+  const ve = erosionalVelocity(rho, C);
+  return { A, v, ve, ratio: v / ve };
+}
+function separatorBalance(D, L, Qg, Qc, Qw, ef, frac) {
+  const V = Math.PI / 4 * D * D * L;
+  const Vl = V * frac / 100;
+  const Ql = Qc + Qw;
+  const tres = Ql > 0 ? Vl / Ql * 60 : Infinity;
+  const Ag = Math.PI / 4 * D * D * (1 - frac / 100);
+  const vg = Qg / 3600 / Ag;
+  return { V, Vl, Ql, tres, vg, arrastre: Ql * (1 - ef / 100), liqOk: Ql * ef / 100 };
+}
+function shellThickness(Pd_barg, Dmm, S, E) {
+  const P = Pd_barg / 10; // MPa
+  const R = Dmm / 2;
+  const t = P * R / (S * E - 0.6 * P);
+  return { t, valido: P <= 0.385 * S * E };
+}
+
+/* ---------------------- Elastómeros (ISO 23936-2) ---------------------- */
+function evalElastomers(e, crit) {
+  // e: { Tmin, Tmax, PMPa, H2S, CO2, hc, aromat, alc, meoh, agua, teg }
+  const cv = critVals(crit);
+  const res = ELASTOMEROS.map(x => {
+    const fails = [], conds = [];
+    if (e.Tmax > x.tmax) fails.push(`Tmáx ${e.Tmax} °C > ${x.tmax} °C (máx. en aire, Tabla C.1)`);
+    const chk = (flag, k, lbl) => { if (!flag) return; if (x[k] === "NO") fails.push(`${lbl}: NO`); else if (x[k] === "C") conds.push(`${lbl}: C (verificar)`); };
+    chk(e.hc, "crudo", "Hidrocarburo/condensado");
+    chk(e.alc, "alc", "Fluido alcalino (amina)");
+    chk(e.meoh, "meoh", "Metanol/glicol");
+    chk(e.agua, "agua", "Agua");
+    chk(e.H2S > 0, "h2s", "H₂S");
+    if (e.aromat && x.id === "FEPM") conds.push("Aromáticos: malo en solventes aromáticos");
+    if (e.teg) conds.push("TEG no está en la Tabla C.1: ensayo específico (Anexo A.1.1.3)");
+    const estado = fails.length ? "no" : conds.length ? "cond" : "ok";
+    return { ...x, estado, fails, conds };
+  });
+  const rgd = e.PMPa >= cv.rgdHigh ? "alto" : e.PMPa >= cv.rgdLow ? "medio" : "bajo";
+  const tc = tempClass(e.Tmin, e.Tmax);
+  let medio;
+  if (e.H2S > 0) medio = e.H2S <= 2 && e.CO2 <= 3 ? "A.3.i (3 % CO₂, 2 % H₂S, 95 % CH₄) — cubre la composición del servicio" : (e.H2S <= 10 && e.CO2 <= 5 ? "A.3.ii (5 % CO₂, 10 % H₂S, 85 % CH₄)" : "A.3.iii a medida: el servicio excede A.3.ii");
+  else medio = e.CO2 <= 5 ? "A.2.i (5 % CO₂, 95 % CH₄)" : "A.2.ii a medida";
+  const liq = e.hc ? (e.aromat ? "A.1.ii aromático (70 % heptano, 20 % ciclohexano, 10 % tolueno)" : "A.1.i no aromático (70 % heptano, 30 % ciclohexano)") : "Fase líquida según el servicio (Anexo A.1.1.3)";
+  const multi = e.agua ? (e.H2S > 0 ? "A.5 multifásico agrio: 30 % gas, 10 % agua desionizada, 60 % líquido" : "A.4 multifásico dulce") : "Monofásico";
+  return { res, rgd, tc, medio, liq, multi };
+}
+
+function fmt(x, d = 2) {
+  if (x === null || x === undefined || Number.isNaN(x)) return "—";
+  if (!isFinite(x)) return "∞";
+  return Number(x).toLocaleString("es-CO", { minimumFractionDigits: d, maximumFractionDigits: d });
+}
+
+if (typeof module !== "undefined") module.exports = { evaluate, dwm, partialPressures, tempClass, evalElastomers, separatorBalance, nozzle, gasDensity, shellThickness, computePREN, fmt };
+
+/* =====================================================================
+   INTERFAZ DEL SIMULADOR B2
+   ===================================================================== */
+const TAGS = { D: "Dato del escenario B", I: "Inventario / inferido del informe", S: "Supuesto (S1 o valor típico didáctico)", P: "Pendiente: valor provisional para poder calcular", U: "Modificado por usted" };
+const VIEWS = [
+  ["inicio", "Inicio"], ["equipos", "Equipos"], ["corrientes", "Corrientes"], ["mecanismos", "Mecanismos"],
+  ["simulador", "Simulador"], ["sellos", "Sellos"], ["escenarios", "Escenarios"], ["criterios", "Criterios"],
+  ["normas", "Normas"], ["reporte", "Reporte"]
+];
+const TIPO_TXT = { hc_humedo: "Hidrocarburo húmedo", agua_agria: "Agua agria", gas_humedo: "Gas húmedo", amina_rica: "Amina rica", amina_pobre: "Amina pobre", gas_acido: "Gas ácido húmedo", teg: "TEG", vapor_acido: "Vapor ácido condensable", drenaje: "Drenaje acuoso", gas_seco: "Gas seco", servicio: "Servicio B3", agua_mar: "Agua de mar" };
+const FORMA_TXT = { recipiente: "Recipiente / pared a presión", boquilla: "Boquillas y bridas", tuberia: "Tubería", internos: "Internos (pared delgada)", tubos: "Tubos de intercambiador", sello: "Sellos elastoméricos" };
+const AGUA_TXT = { si: "Sí, agua libre", no: "No (seco)", posible: "Posible", condensa: "Condensa al enfriar" };
+const EST_TXT = { activo: ["Activo", "bad"], verificar: ["Por verificar", "warn"], descartado: ["Descartado (condición)", "ok"], na: ["No aplica", "na"] };
+
+/* -------------------- estado -------------------- */
+const S = {
+  eq: "E1-SEP", pieza: "virola", inputs: {}, crit: JSON.parse(JSON.stringify(CRIT_DEFAULT)), aplica15156sol: true,
+  mat: {}, reporte: [], esc: null, sello: null, eqSel: "E1-SEP", stFilter: "todas", stSel: "C01", cmpA: null, cmpB: null,
+  proc: {}
+};
+function load() {
+  try {
+    const raw = localStorage.getItem("b2sim-v1");
+    if (!raw) return;
+    const o = JSON.parse(raw);
+    Object.assign(S, o);
+    for (const k in CRIT_DEFAULT) if (!S.crit[k]) S.crit[k] = JSON.parse(JSON.stringify(CRIT_DEFAULT[k]));
+  } catch (e) { /* sin almacenamiento */ }
+}
+function save() { try { localStorage.setItem("b2sim-v1", JSON.stringify(S)); } catch (e) { } }
+function applyMatOverrides() {
+  for (const m of MATERIALS) { const o = S.mat[m.id]; if (o) { if (o.costo != null) m.costo = o.costo; if (o.fab != null) m.fab = o.fab; } }
+}
+const MAT_BASE = MATERIALS.map(m => ({ id: m.id, costo: m.costo, fab: m.fab }));
+
+/* -------------------- utilidades -------------------- */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const tag = t => t ? `<span class="tag tag-${t}" title="${esc(TAGS[t])}">${t}</span>` : "";
+const st = (txt, k) => `<span class="st st-${k}">${esc(txt)}</span>`;
+const eqById = id => EQUIPOS.find(e => e.id === id);
+const pzById = (eq, id) => eqById(eq).piezas.find(p => p.id === id);
+const matById = id => MATERIALS.find(m => m.id === id);
+const chipS = id => { const s = STREAMS[id]; return s ? `<span class="chip c-${s.color}" title="${esc(s.nombre)}">${esc(id)}</span>` : esc(id); };
+function toast(msg) { const t = $("#toast"); t.textContent = msg; t.classList.add("on"); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("on"), 2600); }
+
+/* -------------------- entradas por pieza -------------------- */
+function defaultInputs(eqId, pzId, streamId) {
+  const p = pzById(eqId, pzId);
+  const sid = streamId || p.corriente;
+  const s = STREAMS[sid];
+  const v = (pv, sv) => pv != null ? [pv, "S"] : [sv[0], sv[1]];
+  const T = v(p.T, s.T);
+  const Tmax = p.Tmax != null ? [p.Tmax, "S"] : (p.T != null ? [Math.max(p.T, s.Tmax[0]), "S"] : [s.Tmax[0], s.Tmax[1]]);
+  const serv = p.servicio || null;
+  const sv = serv ? STREAMS[serv] : null;
+  return {
+    corriente: sid,
+    P: v(p.P, s.P), T, Tmax, Tmin: [s.Tmin[0], s.Tmin[1]],
+    H2S: [s.H2S[0], s.H2S[1]], CO2: [s.CO2[0], s.CO2[1]], agua: [s.agua[0], s.agua[1]],
+    pH: [s.pH[0], s.pH[1]], Cl: [s.Cl[0], s.Cl[1]], wAgua: s.wAgua ? [...s.wAgua] : [100, "S"],
+    rocio: s.rocio ? [...s.rocio] : [-10, "S"],
+    amina: s.amina ? { ...s.amina, t: "S" } : null, teg: s.teg ? { ...s.teg, t: "S" } : null,
+    inh: [0, "S"], vida: [25, "D"], ext: !!p.ext, aislado: !!p.ext && T[0] > 60,
+    serv, servT: sv ? [sv.Tmax[0], sv.Tmax[1]] : null
+  };
+}
+function getInputs(eqId, pzId) {
+  const k = eqId + "|" + pzId;
+  if (!S.inputs[k]) S.inputs[k] = defaultInputs(eqId, pzId);
+  return S.inputs[k];
+}
+function engineInput(inp, p) {
+  const s = STREAMS[inp.corriente];
+  return {
+    forma: p.forma, tipo: s.tipo, P: +inp.P[0], T: +inp.T[0], Tmax: Math.max(+inp.Tmax[0], +inp.T[0]), Tmin: +inp.Tmin[0],
+    H2S: +inp.H2S[0], CO2: +inp.CO2[0], agua: inp.agua[0], pH: +inp.pH[0], Cl: +inp.Cl[0], wAgua: +inp.wAgua[0], rocio: +inp.rocio[0],
+    amina: inp.amina, teg: inp.teg, inh: +inp.inh[0], vida: +inp.vida[0], ext: inp.ext, aislado: inp.aislado,
+    serv: inp.serv ? { id: inp.serv, T: +inp.servT[0], Tmax: +inp.servT[0], Cl: STREAMS[inp.serv].Cl[0] } : null,
+    caInv: p.caInv ?? null, aplica15156sol: S.aplica15156sol
+  };
+}
+function runPiece(eqId, pzId, inp) {
+  const p = pzById(eqId, pzId);
+  inp = inp || getInputs(eqId, pzId);
+  const ei = engineInput(inp, p);
+  return { p, inp, ei, r: evaluate(ei, S.crit) };
+}
+function invStatus(p, r) {
+  if (!p.inv) return null;
+  const m = r.mats.find(x => x.id === p.inv);
+  if (!m) return { k: "na", t: "No evaluable", m: null };
+  if (!m.viable) return { k: "bad", t: "No cumple", m };
+  if (m.avisos.some(x => x.includes("inventario"))) return { k: "warn", t: "Cumple si se ajusta el sobreespesor", m };
+  if (r.mejor && r.mejor.id === p.inv) return { k: "ok", t: "Se mantiene (mejor opción)", m };
+  return { k: "warn", t: "Cumple con condiciones", m };
+}
+
+/* -------------------- diagrama de flujo -------------------- */
+const NODES = {
+  "E1-REC": [30, 150, 130, 64], "E1-SEP": [210, 150, 130, 64], "E2-ABS": [420, 105, 120, 135],
+  "E2-HX": [420, 318, 132, 58], "E2-REG": [640, 286, 132, 94], "E2-REH": [640, 410, 132, 58],
+  "E3-CON": [880, 105, 120, 135], "E3-REG": [880, 318, 132, 72]
+};
+const COL = { gas: "var(--gas)", liq: "var(--liq)", amina: "var(--amina)", teg: "var(--teg)", acido: "var(--acido)", serv: "var(--serv)" };
+const LINES = [
+  ["C01", "gas", "M0 182 H30", [8, 172]],
+  ["C01", "gas", "M160 182 H210", [168, 172]],
+  ["C02", "gas", "M340 182 H372 V222 H420", [346, 172]],
+  ["C03", "liq", "M290 214 V268", [296, 252]],
+  ["C04", "liq", "M250 214 V268", [212, 252]],
+  ["C07", "gas", "M480 105 V72 H845 V222 H880", [600, 64]],
+  ["C05-R", "amina", "M470 240 V318", [478, 290]],
+  ["C05-R", "amina", "M552 334 H640", [596, 326]],
+  ["C05-P", "amina", "M700 380 V410", [708, 400]],
+  ["C05-P", "amina", "M640 446 H592 V362 H552", [598, 460]],
+  ["C05-P", "amina", "M490 376 V398 H575 V125 H540", [583, 160]],
+  ["C06", "acido", "M700 286 V250", [708, 262]],
+  ["MC", "serv", "M830 438 H772", [790, 430], true],
+  ["C10", "gas", "M940 105 V72 H1160", [1010, 64]],
+  ["C08-R", "teg", "M930 240 V318", [938, 290]],
+  ["C08-P", "teg", "M1012 372 H1048 V135 H1000", [1056, 260]],
+  ["C09-V", "acido", "M880 336 H826 V292", [834, 352]],
+  ["C09-D", "liq", "M940 390 V430", [948, 422]]
+];
+function flowSVG(sel) {
+  let s = `<svg class="flow" viewBox="0 36 1180 440" role="group" aria-label="Diagrama de los 8 equipos del alcance y sus corrientes">`;
+  // destinos fuera de alcance
+  const off = [[205, 268, 120, 34, "C04 → agua agria (B3)", "C03 → estabilización (E5)"], [655, 214, 110, 34, "C06 → tratamiento B3"], [1060, 50, 112, 34, "C10 → Etapa 4"], [770, 254, 100, 30, "C09-V → B3"], [895, 430, 120, 30, "C09-D → drenajes"]];
+  s += `<g class="off"><rect x="196" y="270" width="148" height="44" rx="4"/><text x="203" y="287">Agua agria → B3 (C04)</text><text x="203" y="304">Condensado → Etapa 5 (C03)</text>`;
+  s += `<rect x="646" y="208" width="128" height="40" rx="4"/><text x="654" y="232">Gas ácido → B3</text>`;
+  s += `<rect x="1060" y="44" width="112" height="24" rx="4"/><text x="1068" y="60">Gas seco → Etapa 4</text>`;
+  s += `<rect x="770" y="262" width="74" height="28" rx="4"/><text x="776" y="280">Vapores B3</text>`;
+  s += `<rect x="892" y="432" width="96" height="28" rx="4"/><text x="900" y="450">Drenajes B3</text></g>`;
+  for (const [id, c, d, lp, dashed] of LINES) {
+    s += `<path class="halo" d="${d}"/><path class="ln" d="${d}" stroke="${COL[c]}" ${dashed ? 'stroke-dasharray="5 4"' : ""}/>${dashed ? "" : `<path class="flowing" d="${d}"/>`}`;
+    s += `<text class="lbl" x="${lp[0]}" y="${lp[1]}" fill="${COL[c]}">${id}</text>`;
+  }
+  for (const e of EQUIPOS) {
+    const [x, y, w, h] = NODES[e.id];
+    const lines = splitName(e.corto);
+    s += `<g class="node ${e.id === sel ? "sel" : ""}" data-eq="${e.id}" tabindex="0" role="button" aria-label="${esc(e.nombre)}"><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="6"/>`;
+    s += `<circle cx="${x + 15}" cy="${y + 15}" r="10"/><text class="num" x="${x + 15}" y="${y + 19}" text-anchor="middle">${e.n}</text>`;
+    lines.forEach((t, i) => s += `<text x="${x + w / 2 + 8}" y="${y + h / 2 + 4 + (i - (lines.length - 1) / 2) * 16}" text-anchor="middle">${esc(t)}</text>`);
+    s += `</g>`;
+  }
+  s += `<text class="lbl2" x="4" y="232">desde la válvula de llegada</text></svg>`;
+  s += `<div class="legend"><span><i style="background:var(--gas)"></i>Gas</span><span><i style="background:var(--liq)"></i>Líquidos</span><span><i style="background:var(--amina)"></i>Amina</span><span><i style="background:var(--teg)"></i>TEG</span><span><i style="background:var(--acido)"></i>Gas ácido / vapores</span><span><i style="background:var(--serv)"></i>Servicio B3 (punteado)</span></div>`;
+  return s;
+}
+function splitName(t) {
+  if (t.length <= 14) return [t];
+  const w = t.split(" "); const a = []; let cur = "";
+  for (const x of w) { if ((cur + " " + x).trim().length > 14 && cur) { a.push(cur); cur = x; } else cur = (cur + " " + x).trim(); }
+  if (cur) a.push(cur); return a;
+}
+function bindFlow(root, onPick) {
+  root.querySelectorAll(".node").forEach(n => {
+    const go = () => onPick(n.dataset.eq);
+    n.addEventListener("click", go);
+    n.addEventListener("keydown", ev => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); go(); } });
+  });
+}
+
+/* -------------------- vistas -------------------- */
+function viewInicio() {
+  const rows = [];
+  let nOk = 0, nWarn = 0, nBad = 0;
+  for (const e of EQUIPOS) for (const p of e.piezas) {
+    if (p.forma === "sello") continue;
+    const { r } = runPiece(e.id, p.id);
+    const s = invStatus(p, r);
+    if (s) { if (s.k === "ok") nOk++; else if (s.k === "warn") nWarn++; else if (s.k === "bad") nBad++; }
+    rows.push(`<tr class="click" data-go="${e.id}|${p.id}"><td>${e.n}. ${esc(e.corto)}</td><td>${esc(p.nombre)}</td><td>${chipS(getInputs(e.id, p.id).corriente)}</td><td>${esc(matById(p.inv)?.nombre || "—")}</td><td>${s ? st(s.t, s.k) : ""}</td><td><b>${esc(r.mejor ? r.mejor.nombre : "Ninguno viable")}</b></td></tr>`);
+  }
+  return `
+  <section class="sheet">
+    <h1>Selección de materiales para la planta de gas B2</h1>
+    <p class="lede">Ocho equipos de las etapas 1 a 3, desde la recepción hasta la deshidratación. Elija un equipo en el diagrama para evaluar sus piezas con las condiciones de cada corriente, o revise abajo cómo queda el inventario frente a lo que recomienda el simulador.</p>
+    ${flowSVG(S.eq)}
+  </section>
+  <section class="sheet">
+    <h2>Inventario frente a recomendación</h2>
+    <p>Calculado con los valores actuales de cada pieza (los del informe, salvo que usted los haya cambiado). ${st(nOk + " se mantienen", "ok")} ${st(nWarn + " con condiciones", "warn")} ${st(nBad + " no cumplen", "bad")}</p>
+    <div class="tw"><table><thead><tr><th>Equipo</th><th>Pieza</th><th>Corriente</th><th>Material de inventario</th><th>Estado</th><th>Recomendado</th></tr></thead><tbody>${rows.join("")}</tbody></table></div>
+    <p class="small">Sin inhibidor (disponibilidad 0 %) y sin crédito por MEG, porque el informe no los cuantifica. Cambie esos datos en el simulador para ver su efecto.</p>
+  </section>
+  <div class="grid2">
+    <section class="sheet"><h2>Base de diseño del escenario B</h2><table><tbody>${ESCENARIO.map(([a, b]) => `<tr><th style="width:44%">${esc(a)}</th><td>${esc(b)}</td></tr>`).join("")}</tbody></table></section>
+    <section class="sheet"><h2>Cómo leer los datos</h2>
+      <p>Cada valor lleva su origen: ${tag("D")} dato del escenario, ${tag("I")} inventario o inferido del informe, ${tag("S")} supuesto, ${tag("P")} pendiente y ${tag("U")} cambiado por usted.</p>
+      <p>Los valores ${tag("S")} y ${tag("P")} existen para que el simulador pueda calcular; reemplácelos cuando las actas B1–B2 y B2–B3 los definan.</p>
+      <h3>Información que falta</h3><ul class="tight">${PENDIENTES.map(x => `<li>${esc(x)}</li>`).join("")}</ul>
+      <p class="small">Herramienta académica de consulta y evaluación preliminar. No reemplaza cálculos certificados ni declara cumplimiento de normas.</p>
+    </section>
+  </div>`;
+}
+function afterInicio() {
+  bindFlow($("main"), id => { S.eq = id; S.pieza = eqById(id).piezas[0].id; save(); location.hash = "#simulador"; });
+  document.querySelectorAll("[data-go]").forEach(tr => tr.addEventListener("click", () => { const [e, p] = tr.dataset.go.split("|"); S.eq = e; S.pieza = p; save(); location.hash = "#simulador"; }));
+}
+
+function viewEquipos() {
+  const e = eqById(S.eqSel) || EQUIPOS[0];
+  return `<section class="sheet"><h1>Equipos del alcance</h1><p class="lede">Inventario del informe B2 para los ocho equipos. Los materiales son candidatos de partida, no aprobados.</p>
+  <div class="grid3">${EQUIPOS.map(x => `<button class="eqcard" data-eq="${x.id}" aria-pressed="${x.id === e.id}"><h3><span class="n">${x.n}</span>${esc(x.nombre)}</h3><div class="small">Etapa ${x.etapa} · ${x.piezas.length} piezas</div><div>${[...new Set([...x.entradas, ...x.salidas])].map(chipS).join("")}</div></button>`).join("")}</div></section>
+  <section class="sheet"><h2>${e.n}. ${esc(e.nombre)}</h2><p>${esc(e.funcion)}</p>
+  <p><b>Entra:</b> ${e.entradas.map(chipS).join("")} &nbsp; <b>Sale:</b> ${e.salidas.map(chipS).join("")}</p>
+  <div class="tw"><table><thead><tr><th>Pieza</th><th>Tipo</th><th>Material propuesto (inventario)</th><th>Dimensiones conceptuales</th><th>Cantidad</th><th>Norma de consulta</th><th>Corriente</th><th></th></tr></thead><tbody>
+  ${e.piezas.map(p => `<tr><td><b>${esc(p.nombre)}</b></td><td>${esc(FORMA_TXT[p.forma])}</td><td>${esc(p.invTxt)}</td><td>${esc(p.dim)}</td><td>${esc(p.cant)}</td><td>${esc(p.norma)}</td><td>${chipS(p.corriente)}${p.servicio ? " / " + chipS(p.servicio) : ""}</td><td><button class="btn sm" data-sim="${p.id}">${p.forma === "sello" ? "Evaluar sellos" : "Simular"}</button></td></tr>`).join("")}
+  </tbody></table></div></section>`;
+}
+function afterEquipos() {
+  document.querySelectorAll(".eqcard").forEach(b => b.addEventListener("click", () => { S.eqSel = b.dataset.eq; save(); render(); }));
+  document.querySelectorAll("[data-sim]").forEach(b => b.addEventListener("click", () => {
+    S.eq = S.eqSel; S.pieza = b.dataset.sim; save();
+    const p = pzById(S.eq, S.pieza);
+    if (p.forma === "sello") { S.sello = selloPreset(S.eq, p); save(); location.hash = "#sellos"; } else location.hash = "#simulador";
+  }));
+}
+
+const SCOPE_STREAMS = ["C01", "C02", "C03", "C04", "C05-R", "C05-P", "C06", "C07", "C08-R", "C08-P", "C09-V", "C09-D", "C10", "MC", "C13-W"];
+function viewCorrientes() {
+  const fams = [["todas", "Todas"], ["gas", "Gas"], ["liq", "Líquidos"], ["amina", "Amina"], ["teg", "TEG"], ["acido", "Gas ácido / vapores"], ["serv", "Servicios B3"]];
+  const list = SCOPE_STREAMS.filter(id => S.stFilter === "todas" || STREAMS[id].color === S.stFilter);
+  const s = STREAMS[S.stSel] || STREAMS.C01;
+  const usedBy = EQUIPOS.filter(e => e.entradas.includes(S.stSel) || e.salidas.includes(S.stSel) || e.piezas.some(p => p.corriente === S.stSel || p.servicio === S.stSel));
+  const m = MECH[S.stSel];
+  const cell = v => `${esc(fmt(v[0], v[0] < 1 && v[0] > 0 ? 4 : v[0] >= 1000 ? 0 : 1))}${tag(v[1])}`;
+  return `<section class="sheet"><h1>Corrientes que tocan los ocho equipos</h1><p class="lede">Base de diseño por corriente (Tabla 20 del informe). Las fracciones de H₂S y CO₂ son de la fase gas en equilibrio a la presión indicada.</p>
+  <div class="seg" role="group" aria-label="Filtrar por tipo">${fams.map(([k, t]) => `<button data-f="${k}" aria-pressed="${S.stFilter === k}">${t}</button>`).join("")}</div>
+  <div class="tw" style="margin-top:12px"><table><thead><tr><th>ID</th><th>Corriente</th><th>Tipo</th><th class="num">P (bar a)</th><th class="num">T (°C)</th><th class="num">H₂S (% mol)</th><th class="num">CO₂ (% mol)</th><th class="num">pH</th><th class="num">Cl⁻ (mg/L)</th><th>Agua</th></tr></thead><tbody>
+  ${list.map(id => { const x = STREAMS[id]; return `<tr class="click" data-st="${id}"><td>${chipS(id)}</td><td>${esc(x.nombre)}</td><td>${esc(TIPO_TXT[x.tipo])}</td><td class="num">${cell(x.P)}</td><td class="num">${cell(x.T)}</td><td class="num">${cell(x.H2S)}</td><td class="num">${cell(x.CO2)}</td><td class="num">${cell(x.pH)}</td><td class="num">${cell(x.Cl)}</td><td>${esc(AGUA_TXT[x.agua[0]])}${tag(x.agua[1])}</td></tr>`; }).join("")}
+  </tbody></table></div></section>
+  <section class="sheet"><h2>${chipS(S.stSel)} ${esc(s.nombre)}</h2><p><b>Fase:</b> ${esc(s.fase)}. <b>Material candidato del informe:</b> ${esc(s.material)}</p><div class="note">${esc(s.nota)}</div>
+  ${m ? `<h3>Cribado de mecanismos (Tabla 22)</h3><table><tbody><tr><th style="width:24%">Potencial</th><td>${esc(m.P)}</td></tr><tr><th>Por verificar</th><td>${esc(m.V)}</td></tr><tr><th>Descarte condicionado</th><td>${esc(m.D)}</td></tr><tr><th>Justificación</th><td>${esc(m.J)}</td></tr></tbody></table>` : ""}
+  <p style="margin-top:10px"><b>Equipos donde aparece:</b> ${usedBy.map(e => `${e.n}. ${esc(e.corto)}`).join(" · ") || "—"}</p></section>`;
+}
+function afterCorrientes() {
+  document.querySelectorAll("[data-f]").forEach(b => b.addEventListener("click", () => { S.stFilter = b.dataset.f; save(); render(); }));
+  document.querySelectorAll("[data-st]").forEach(tr => tr.addEventListener("click", () => { S.stSel = tr.dataset.st; save(); render(); }));
+}
+
+function viewMecanismos() {
+  const ids = SCOPE_STREAMS.filter(id => MECH[id]).concat(["EXT"]);
+  return `<section class="sheet"><h1>Cribado de mecanismos de daño</h1><p class="lede">Matriz del informe (Tabla 22) para las corrientes del alcance. La falta de datos no es evidencia para descartar un mecanismo.</p>
+  <div class="tw"><table><thead><tr><th>ID</th><th>Potencial / se considera</th><th>Por verificar</th><th>Descarte justificado / condición</th><th>Justificación</th></tr></thead><tbody>
+  ${ids.map(id => { const m = MECH[id]; return `<tr><td>${id === "EXT" ? "<b>EXT</b>" : chipS(id)}</td><td>${esc(m.P)}</td><td>${esc(m.V)}</td><td>${esc(m.D)}</td><td>${esc(m.J)}</td></tr>`; }).join("")}
+  </tbody></table></div></section>
+  <section class="sheet"><h2>Qué hace el simulador con esta matriz</h2>
+  <p>En cada pieza, el simulador vuelve a clasificar los mecanismos con los números que usted ingresa: por ejemplo, SSC/HIC pasa a «descartado» solo si pH₂S queda por debajo de ${fmt(S.crit.sourKPa.v, 1)} kPa, y la corrosión por CO₂ solo se descarta si el gas cumple el criterio de punto de rocío de ISO 21457 §6.2.3.5.</p>
+  <h3>Evidencia mínima para cerrar descartes (Tabla 23)</h3>
+  <ul class="tight"><li><b>CO₂/SSC/HIC en gas tratado:</b> ausencia de agua líquida en operación, transitorios y enfriamiento.</li><li><b>Cloruros/SCC:</b> Cl⁻ en la fase acuosa realmente mojante, T local, material y esfuerzos.</li><li><b>Erosión-corrosión:</b> caudal, diámetro, velocidad, fases, sólidos.</li><li><b>Agrietamiento por amina:</b> tipo/concentración, T, soldadura, PWHT y API RP 945.</li><li><b>Agua de enfriamiento:</b> cloro residual y T acordados con B3.</li><li><b>Severidad:</b> pCO₂/pH₂S con la presión definitiva y diagrama de regiones de ISO 15156-2.</li></ul></section>`;
+}
+
+/* -------------------- simulador -------------------- */
+function fieldNum(key, label, val, t, step, extra = "") {
+  return `<div class="field"><label for="f_${key}">${label}${tag(t)}</label><input id="f_${key}" type="number" step="${step}" data-k="${key}" value="${val}" ${extra}></div>`;
+}
+function fieldSel(key, label, val, t, opts) {
+  return `<div class="field"><label for="f_${key}">${label}${tag(t)}</label><select id="f_${key}" data-k="${key}">${opts.map(([v, x]) => `<option value="${v}" ${String(v) === String(val) ? "selected" : ""}>${esc(x)}</option>`).join("")}</select></div>`;
+}
+function formHTML(eqId, pzId, inp, prefix = "") {
+  const e = eqById(eqId), p = pzById(eqId, pzId), s = STREAMS[inp.corriente];
+  const streams = [...new Set([p.corriente, ...e.entradas, ...e.salidas])].filter(x => STREAMS[x] && STREAMS[x].tipo !== "servicio");
+  let h = fieldSel("corriente", "Corriente que moja la pieza", inp.corriente, null, streams.map(x => [x, x + " · " + STREAMS[x].nombre]));
+  h += `<div class="small" style="margin:-2px 0 6px">${esc(TIPO_TXT[s.tipo])}. Cambiar la corriente restablece sus valores.</div>`;
+  h += `<div class="fgroup"><h4>Presión y temperatura</h4>`;
+  h += fieldNum("P", "Presión total (bar a)", inp.P[0], inp.P[1], "0.1");
+  h += fieldNum("T", "T de operación (°C)", inp.T[0], inp.T[1], "1");
+  h += fieldNum("Tmax", "T máxima (°C)", inp.Tmax[0], inp.Tmax[1], "1");
+  h += fieldNum("Tmin", "T mínima de diseño (°C)", inp.Tmin[0], inp.Tmin[1], "1") + `</div>`;
+  h += `<div class="fgroup"><h4>Composición y fase acuosa</h4>`;
+  h += fieldNum("H2S", "H₂S en fase gas (% mol)", inp.H2S[0], inp.H2S[1], "any");
+  h += fieldNum("CO2", "CO₂ en fase gas (% mol)", inp.CO2[0], inp.CO2[1], "any");
+  h += fieldSel("agua", "Agua libre", inp.agua[0], inp.agua[1], Object.entries(AGUA_TXT));
+  h += fieldNum("pH", "pH de la fase acuosa", inp.pH[0], inp.pH[1], "0.1");
+  h += fieldNum("Cl", "Cl⁻ en fase acuosa (mg/L)", inp.Cl[0], inp.Cl[1], "100");
+  if (WET_ACID.includes(s.tipo) || s.tipo === "gas_seco") h += fieldNum("wAgua", "Agua en la fase acuosa (%, resto MEG/glicol)", inp.wAgua[0], inp.wAgua[1], "1", 'min="1" max="100"');
+  if (s.tipo === "gas_seco") h += fieldNum("rocio", "Punto de rocío de agua (°C)", inp.rocio[0], inp.rocio[1], "1");
+  h += `</div>`;
+  if (inp.amina) {
+    const a = inp.amina;
+    h += `<div class="fgroup"><h4>Química de la amina ${tag(a.t)}</h4>`;
+    h += fieldSel("am_tipo", "Tipo de amina", a.tipo, null, [["MDEA", "MDEA"], ["DEA", "DEA"], ["MEA", "MEA"]]);
+    h += fieldNum("am_conc", "Concentración (% p/p)", a.conc, null, "1");
+    h += fieldNum("am_carga", "Carga ácida (mol/mol)", a.carga, null, "0.01");
+    h += fieldNum("am_vel", "Velocidad local (m/s)", a.vel, null, "0.1");
+    h += fieldNum("am_hss", "Sales termoestables (% p/p)", a.hss, null, "0.1") + `</div>`;
+  }
+  if (inp.teg) {
+    const t = inp.teg;
+    h += `<div class="fgroup"><h4>Condición del TEG ${tag(t.t)}</h4>`;
+    h += fieldNum("teg_Tpel", "T de película (°C)", t.Tpel, null, "1");
+    h += fieldSel("teg_cont", "Contaminado (H₂S, salmuera, HC)", t.contaminado, null, [["no", "No"], ["si", "Sí"]]) + `</div>`;
+  }
+  h += `<div class="fgroup"><h4>Control de corrosión y vida</h4>`;
+  h += fieldNum("inh", "Disponibilidad de inhibidor (%)", inp.inh[0], inp.inh[1], "1", 'min="0" max="100"');
+  h += fieldNum("vida", "Vida de diseño (años)", inp.vida[0], inp.vida[1], "1") + `</div>`;
+  if (p.forma === "tubos") {
+    h += `<div class="fgroup"><h4>Lado servicio del intercambiador</h4>`;
+    h += fieldSel("serv", "Fluido del otro lado", inp.serv || "", null, [["C13-W", "C13-W agua de mar clorada"], ["C13-F", "C13-F agua dulce cerrada"], ["MC", "Medio de calentamiento (B3)"], ["C05-P", "C05-P amina pobre"], ["", "Ninguno / aire"]]);
+    if (inp.serv) h += fieldNum("servT", "T máx. lado servicio (°C)", inp.servT ? inp.servT[0] : 40, inp.servT ? inp.servT[1] : "P", "1");
+    h += `</div>`;
+  }
+  h += `<div class="fgroup"><h4>Exterior</h4><label class="check"><input type="checkbox" data-k="ext" ${inp.ext ? "checked" : ""}> Expuesta a atmósfera marina</label><label class="check"><input type="checkbox" data-k="aislado" ${inp.aislado ? "checked" : ""}> Con aislamiento térmico</label></div>`;
+  return h;
+}
+function bindForm(root, getInp, onChange, eqId, pzId) {
+  root.querySelectorAll("[data-k]").forEach(el => {
+    el.addEventListener(el.tagName === "SELECT" || el.type === "checkbox" ? "change" : "input", () => {
+      const inp = getInp(); const k = el.dataset.k;
+      if (k === "corriente") { const n = defaultInputs(eqId, pzId, el.value); Object.keys(inp).forEach(x => delete inp[x]); Object.assign(inp, n); onChange(true); return; }
+      if (el.type === "checkbox") inp[k] = el.checked;
+      else if (k.startsWith("am_")) { const f = k.slice(3); inp.amina[f] = f === "tipo" ? el.value : +el.value; inp.amina.t = "U"; }
+      else if (k.startsWith("teg_")) { if (k === "teg_cont") inp.teg.contaminado = el.value; else inp.teg.Tpel = +el.value; inp.teg.t = "U"; }
+      else if (k === "serv") { inp.serv = el.value || null; inp.servT = inp.serv ? [STREAMS[inp.serv] ? STREAMS[inp.serv].Tmax[0] : 40, "P"] : null; onChange(true); return; }
+      else if (k === "agua") inp.agua = [el.value, "U"];
+      else { if (el.value === "" || isNaN(+el.value)) return; inp[k] = [+el.value, "U"]; }
+      const lab = el.closest(".field")?.querySelector(".tag"); if (lab && !k.startsWith("am_") && !k.startsWith("teg_")) { lab.className = "tag tag-U"; lab.textContent = "U"; lab.title = TAGS.U; }
+      onChange(false);
+    });
+  });
+}
+
+function viewSimulador() {
+  const e = eqById(S.eq); const p = pzById(S.eq, S.pieza) || e.piezas[0]; S.pieza = p.id;
+  return `<section class="sheet noprint" style="padding-bottom:12px"><h1>Simulador por equipo</h1>
+  <div class="seg" role="group" aria-label="Equipo">${EQUIPOS.map(x => `<button data-eqb="${x.id}" aria-pressed="${x.id === e.id}"><b>${x.n}</b>${esc(x.corto)}</button>`).join("")}</div>
+  <div class="seg" role="group" aria-label="Pieza" style="margin-top:10px">${e.piezas.map(x => `<button data-pz="${x.id}" aria-pressed="${x.id === p.id}">${esc(x.nombre)}</button>`).join("")}</div></section>
+  ${p.forma === "sello" ? `<section class="sheet"><h2>${esc(p.nombre)}</h2><p>Los sellos elastoméricos se evalúan con ISO 23936-2 en la pestaña Sellos, con las condiciones de la corriente ${chipS(p.corriente)} ya cargadas.</p><button class="btn pri" id="goSello">Evaluar sellos de este equipo</button></section>` :
+      `<div class="simwrap"><aside class="sheet form" id="form"><h3>${esc(p.nombre)}</h3><div class="small">${esc(FORMA_TXT[p.forma])} · ${esc(p.dim)}</div><div class="small">Inventario: ${esc(p.invTxt)}</div>
+      ${formHTML(e.id, p.id, getInputs(e.id, p.id))}
+      <div class="btns" style="margin-top:12px"><button class="btn sm" id="reset">Restaurar valores del informe</button></div></aside>
+      <div id="results"></div></div>`}`;
+}
+function afterSimulador() {
+  document.querySelectorAll("[data-eqb]").forEach(b => b.addEventListener("click", () => { S.eq = b.dataset.eqb; S.pieza = eqById(S.eq).piezas[0].id; S.cmpA = S.cmpB = null; save(); render(); }));
+  document.querySelectorAll("[data-pz]").forEach(b => b.addEventListener("click", () => { S.pieza = b.dataset.pz; S.cmpA = S.cmpB = null; save(); render(); }));
+  const gs = $("#goSello"); if (gs) gs.addEventListener("click", () => { S.sello = selloPreset(S.eq, pzById(S.eq, S.pieza)); save(); location.hash = "#sellos"; });
+  const form = $("#form"); if (!form) return;
+  bindForm(form, () => getInputs(S.eq, S.pieza), full => { save(); if (full) render(); else renderResults(); }, S.eq, S.pieza);
+  $("#reset").addEventListener("click", () => { delete S.inputs[S.eq + "|" + S.pieza]; save(); render(); toast("Valores del informe restaurados"); });
+  renderResults();
+}
+
+function crChart(ei, r) {
+  const W = 520, H = 200, L = 46, B = 30, T0 = 20, T1 = 150;
+  const pts = [];
+  let ymax = 0;
+  const W2 = Math.max(1, Math.min(100, ei.wAgua || 100));
+  const fg = Math.min(1, Math.pow(10, 1.6 * (Math.log10(W2) - 2)));
+  for (let t = T0; t <= T1; t += 2) { const pp = partialPressures(ei.P, ei.H2S, ei.CO2, t); const v = dwm(t, pp.fCO2).v * fg; pts.push([t, v]); ymax = Math.max(ymax, v); }
+  const lim = S.crit.caSevere.v / ei.vida;
+  ymax = Math.max(ymax, lim * 1.3, 0.1) * 1.08;
+  const x = t => L + (t - T0) / (T1 - T0) * (W - L - 10), y = v => H - B - v / ymax * (H - B - 10);
+  let s = `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Velocidad de corrosión por CO₂ en función de la temperatura">`;
+  for (let i = 0; i <= 4; i++) { const v = ymax * i / 4; s += `<line x1="${L}" x2="${W - 10}" y1="${y(v)}" y2="${y(v)}" stroke="#E3E9ED"/><text x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${fmt(v, v < 1 ? 2 : 1)}</text>`; }
+  for (let t = 20; t <= 150; t += 20) s += `<text x="${x(t)}" y="${H - B + 16}" text-anchor="middle">${t}</text>`;
+  s += `<text x="${(W + L) / 2}" y="${H - 2}" text-anchor="middle">Temperatura (°C)</text><text x="12" y="${(H - B) / 2}" transform="rotate(-90 12 ${(H - B) / 2})" text-anchor="middle">mm/año</text>`;
+  s += `<line x1="${L}" x2="${W - 10}" y1="${y(lim)}" y2="${y(lim)}" stroke="var(--acido)" stroke-dasharray="5 4"/><text x="${W - 12}" y="${y(lim) - 5}" text-anchor="end" fill="var(--acido)" style="fill:var(--acido)">Máx. para CS: ${fmt(S.crit.caSevere.v, 0)} mm / ${ei.vida} años = ${fmt(lim, 2)}</text>`;
+  s += `<polyline fill="none" stroke="var(--gas)" stroke-width="2.4" points="${pts.map(p => x(p[0]) + "," + y(p[1])).join(" ")}"/>`;
+  if (r.corr.aplica) { s += `<circle cx="${x(Math.min(T1, Math.max(T0, ei.T)))}" cy="${y(r.corr.crBase)}" r="5" fill="var(--ink)"/><text x="${x(Math.min(T1, Math.max(T0, ei.T))) + 8}" y="${y(r.corr.crBase) - 6}" style="fill:var(--ink);font-weight:700">${fmt(r.corr.crBase, 2)} a ${fmt(ei.T, 0)} °C</text>`; }
+  return s + `</svg>`;
+}
+
+function rankingHTML(r, p) {
+  const rows = r.ranking.map((m, i) => {
+    const inv = m.id === p.inv ? ` <span class="st st-na">inventario</span>` : "";
+    const det = `<details><summary>${m.viable ? "Requisitos y avisos" : "Por qué se excluye"}</summary>${m.excl.length ? `<ul class="tight">${m.excl.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : ""}${m.reqs.length ? `<b>Requisitos</b><ul class="tight">${m.reqs.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : ""}${m.avisos.length ? `<b>Avisos</b><ul class="tight">${m.avisos.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : ""}</details>`;
+    return `<tr class="${m.viable ? "" : "excl"}"><td>${m.viable ? i + 1 : "—"}</td><td><b>${esc(m.nombre)}</b>${inv}<div class="small">${esc(m.spec)}</div>${det}</td><td class="num">${m.pren ? fmt(m.pren, 1) : "—"}</td>
+    <td><div class="bar"><i style="width:${m.integ * 10}%"></i></div><span class="small">${fmt(m.integ, 1)}</span></td><td class="num">${fmt(m.costo, 1)}×</td><td><div class="bar t"><i style="width:${m.total * 10}%"></i></div><span class="small">${fmt(m.total, 1)}</span></td><td>${m.viable ? st("Viable", m.avisos.length ? "warn" : "ok") : st("Excluido", "bad")}</td></tr>`;
+  }).join("");
+  return `<div class="tw"><table><thead><tr><th>#</th><th>Material</th><th class="num">PREN</th><th>Integridad</th><th class="num">Costo rel.</th><th>Puntaje</th><th>Estado</th></tr></thead><tbody>${rows}</tbody></table></div>
+  <p class="small">Puntaje = ${S.crit.wInteg.v} % integridad + ${S.crit.wCosto.v} % costo + ${S.crit.wFab.v} % fabricación (pesos editables en Criterios). PREN con la Ec. (1) de ISO 21457 y composición nominal.</p>`;
+}
+
+function compareHTML(r) {
+  const opts = r.mats.map(m => `<option value="${m.id}">${esc(m.nombre)}</option>`).join("");
+  const a = r.mats.find(m => m.id === S.cmpA) || r.ranking[0], b = r.mats.find(m => m.id === S.cmpB) || r.ranking[1] || r.ranking[0];
+  if (!a || !b) return "";
+  const col = m => `<td>${m.viable ? st("Viable", "ok") : st("Excluido", "bad")}</td>`;
+  const li = arr => arr.length ? `<ul class="tight">${arr.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : "—";
+  return `<div class="btns"><label>A <select id="cmpA">${opts}</select></label><label>B <select id="cmpB">${opts}</select></label></div>
+  <div class="tw" style="margin-top:8px"><table><thead><tr><th></th><th>${esc(a.nombre)}</th><th>${esc(b.nombre)}</th></tr></thead><tbody>
+  <tr><th>Estado</th>${col(a)}${col(b)}</tr><tr><th>Especificación</th><td>${esc(a.spec)}</td><td>${esc(b.spec)}</td></tr>
+  <tr><th>PREN</th><td>${a.pren ? fmt(a.pren, 1) : "—"}</td><td>${b.pren ? fmt(b.pren, 1) : "—"}</td></tr>
+  <tr><th>Integridad / costo / fabricación</th><td>${fmt(a.integ, 1)} / ${fmt(a.costo, 1)}× / ${a.sFab}</td><td>${fmt(b.integ, 1)} / ${fmt(b.costo, 1)}× / ${b.sFab}</td></tr>
+  <tr><th>Puntaje</th><td><b>${fmt(a.total, 2)}</b></td><td><b>${fmt(b.total, 2)}</b></td></tr>
+  <tr><th>Exclusiones</th><td>${li(a.excl)}</td><td>${li(b.excl)}</td></tr><tr><th>Requisitos</th><td>${li(a.reqs)}</td><td>${li(b.reqs)}</td></tr><tr><th>Avisos</th><td>${li(a.avisos)}</td><td>${li(b.avisos)}</td></tr>
+  <tr><th>Límite ISO 15156-3</th><td>${esc(matById(a.id).lim15156.nota)}</td><td>${esc(matById(b.id).lim15156.nota)}</td></tr></tbody></table></div>`;
+}
+
+function procHTML(e, p, ei, r) {
+  let h = "";
+  const k = e.id + "|" + p.id;
+  const pr = S.proc[k] = S.proc[k] || { Qg: 2500, Qc: 6, Qw: 4, ef: 98, frac: 40, Q: 2500, rhoL: 1000, MW: 20, Z: 0.9, Pd: 50, E: 1 };
+  if (e.proceso === "separador" && p.forma === "recipiente") {
+    const b = separatorBalance(e.dim.D, e.dim.L, pr.Qg, pr.Qc, pr.Qw, pr.ef, pr.frac);
+    h += `<h3>Balance volumétrico simplificado</h3><p class="small">Recipiente aproximado como cilindro de Ø ${fmt(e.dim.D, 1)} m × ${fmt(e.dim.L, 1)} m. Caudales a condiciones de entrada; todos son supuestos didácticos.</p>
+    <div class="grid3">${pnum(k, "Qg", "Gas (m³/h reales)", pr.Qg)}${pnum(k, "Qc", "Condensado (m³/h)", pr.Qc)}${pnum(k, "Qw", "Agua (m³/h)", pr.Qw)}${pnum(k, "ef", "Captura de líquido (%)", pr.ef)}${pnum(k, "frac", "Volumen ocupado por líquido (%)", pr.frac)}</div>
+    <div class="kpis" style="margin-top:8px"><div class="kpi"><div class="v">${fmt(b.V, 1)} m³</div><div class="l">Volumen del recipiente</div></div><div class="kpi"><div class="v">${fmt(b.Vl, 1)} m³</div><div class="l">Volumen de líquido retenido</div></div><div class="kpi"><div class="v">${fmt(b.tres, 1)} min</div><div class="l">Tiempo de residencia del líquido</div></div><div class="kpi"><div class="v">${fmt(b.vg, 2)} m/s</div><div class="l">Velocidad media del gas</div></div><div class="kpi"><div class="v">${fmt(b.arrastre, 2)} m³/h</div><div class="l">Líquido arrastrado con el gas</div></div></div>`;
+  }
+  if (p.nps && PIPE_ID[p.nps]) {
+    const gasLike = ["gas_humedo", "gas_seco", "gas_acido", "vapor_acido", "hc_humedo"].includes(ei.tipo);
+    const rho = gasLike ? gasDensity(ei.P, ei.T, pr.MW, pr.Z) : pr.rhoL;
+    const n = nozzle(pr.Q, PIPE_ID[p.nps], rho, S.crit.cErosion.v);
+    h += `<h3>Velocidad en la conexión principal y velocidad erosional</h3><p class="small">NPS ${p.nps.replace("-", " Sch ")}, Ø int. ${fmt(PIPE_ID[p.nps], 1)} mm. Densidad ${gasLike ? "de gas ideal corregida por Z" : "de líquido"}; Ve = C/√ρ (API RP 14E, C = ${S.crit.cErosion.v}).</p>
+    <div class="grid3">${pnum(k, "Q", "Caudal real (m³/h)", pr.Q)}${gasLike ? pnum(k, "MW", "Masa molar (g/mol)", pr.MW) + pnum(k, "Z", "Factor Z", pr.Z) : pnum(k, "rhoL", "Densidad (kg/m³)", pr.rhoL)}</div>
+    <div class="kpis" style="margin-top:8px"><div class="kpi"><div class="v">${fmt(rho, 1)} kg/m³</div><div class="l">Densidad</div></div><div class="kpi"><div class="v">${fmt(n.v, 2)} m/s</div><div class="l">Velocidad</div></div><div class="kpi"><div class="v">${fmt(n.ve, 2)} m/s</div><div class="l">Velocidad erosional</div></div><div class="kpi"><div class="v">${st(n.ratio > 1 ? "Supera Ve" : n.ratio > 0.8 ? "Cerca de Ve" : "Bajo Ve", n.ratio > 1 ? "bad" : n.ratio > 0.8 ? "warn" : "ok")}</div><div class="l">v/Ve = ${fmt(n.ratio, 2)}</div></div></div>`;
+  }
+  if (p.forma === "recipiente" && e.dim && /e = [\d,]+ mm/.test(p.dim)) {
+    const eInv = parseFloat(p.dim.match(/e = ([\d,]+) mm/)[1].replace(",", "."));
+    const D = parseFloat((p.dim.match(/Ø (?:int\. )?([\d,]+) m/) || [0, String(e.dim.D)])[1].replace(",", ".")) * 1000;
+    const t = shellThickness(pr.Pd, D, S.crit.sAllow.v, pr.E);
+    const cs = r.mats.find(m => m.id === "cs");
+    const ca = r.corr.clase && r.corr.clase.ca != null ? r.corr.clase.ca : (cs && cs.viable ? (r.amina && r.amina.n ? S.crit.caSevere.v : S.crit.caMild.v) : null);
+    const cladBest = r.mejor && r.mejor.familia === "CLAD";
+    const tot = ca != null ? t.t + ca : cladBest ? t.t : null;
+    h += `<h3>Espesor de pared por presión interna (CS)</h3><p class="small">ASME VIII-1 UG-27, esfuerzo circunferencial: t = P·R / (S·E − 0,6·P), con S = ${S.crit.sAllow.v} MPa (editable en Criterios). Ø int. ${fmt(D / 1000, 2)} m.</p>
+    <div class="grid3">${pnum(k, "Pd", "Presión de diseño (bar g)", pr.Pd)}${pnum(k, "E", "Eficiencia de junta E", pr.E)}</div>
+    <div class="kpis" style="margin-top:8px"><div class="kpi"><div class="v">${fmt(t.t, 1)} mm</div><div class="l">Espesor por presión</div></div><div class="kpi"><div class="v">${ca != null ? fmt(ca, 1) + " mm" : cladBest ? "0 mm" : "No aplica"}</div><div class="l">${ca == null && cladBest ? "Sobreespesor (la capa CRA protege el respaldo)" : "Sobreespesor (resultado de corrosión)"}</div></div><div class="kpi"><div class="v">${tot != null ? fmt(tot, 1) + " mm" : "—"}</div><div class="l">Espesor mínimo con CA</div></div><div class="kpi"><div class="v">${fmt(eInv, 0)} mm</div><div class="l">Espesor del inventario</div></div><div class="kpi"><div class="v">${tot == null ? st("CS no viable", "bad") : tot <= eInv ? st(ca == null ? "Alcanza (respaldo del clad)" : "Alcanza", "ok") : st("No alcanza", "bad")}</div><div class="l">Comparación</div></div></div>
+    ${!t.valido ? `<div class="note warn">P > 0,385·S·E: la fórmula de pared delgada no es válida.</div>` : ""}`;
+  }
+  return h;
+}
+function pnum(k, f, label, v) { return `<div class="field" style="grid-template-columns:1fr 100px"><label>${label}${tag("S")}</label><input type="number" step="any" data-proc="${k}|${f}" value="${v}"></div>`; }
+
+function renderResults() {
+  const e = eqById(S.eq), p = pzById(S.eq, S.pieza);
+  const { inp, ei, r } = runPiece(S.eq, S.pieza);
+  const inv = invStatus(p, r);
+  const pp = r.pp;
+  const cv = S.crit;
+  let h = `<section class="sheet verdict"><div><div class="small">Recomendación para ${esc(p.nombre.toLowerCase())}</div><div class="big">${esc(r.mejor ? r.mejor.nombre : "Ningún candidato cumple")}</div><div class="small">${esc(r.mejor ? r.mejor.spec : "Revise condiciones o amplíe la lista de materiales")}</div>
+   ${inv ? `<p style="margin-top:10px"><b>Material del inventario:</b> ${esc(inv.m ? inv.m.nombre : p.invTxt)} ${st(inv.t, inv.k)}</p>${inv.m && inv.m.excl.length ? `<div class="note bad">${esc(inv.m.excl[0])}</div>` : ""}` : ""}
+   <div class="btns noprint" style="margin-top:8px"><button class="btn pri sm" id="addRep">Agregar al reporte</button><button class="btn sm" id="toEsc">Comparar escenarios</button></div></div>
+   <div class="kpis"><div class="kpi"><div class="v">${fmt(pp.pH2S_kPa, pp.pH2S_kPa < 1 ? 3 : 1)} kPa</div><div class="l">pH₂S (${fmt(pp.pH2S_psia, 2)} psia)</div></div>
+   <div class="kpi"><div class="v">${fmt(pp.pCO2_bar, pp.pCO2_bar < 0.1 ? 3 : 2)} bar</div><div class="l">pCO₂ (${fmt(pp.pCO2_MPa, 3)} MPa)</div></div>
+   <div class="kpi"><div class="v">${r.sour ? st("Agrio", "bad") : st("No agrio", "ok")}</div><div class="l">ISO 15156 (umbral ${fmt(cv.sourKPa.v, 1)} kPa)</div></div>
+   <div class="kpi"><div class="v">${r.corr.aplica ? fmt(r.corr.crEff, 2) + " mm/a" : "—"}</div><div class="l">Corrosión CS efectiva</div></div>
+   <div class="kpi"><div class="v">${r.corr.aplica ? fmt(r.corr.caReq, 1) + " mm" : "—"}</div><div class="l">Pérdida en ${ei.vida} años</div></div>
+   <div class="kpi"><div class="v">${r.api6a.clase} · ${r.api6a.tclase ? r.api6a.tclase.c : "—"}</div><div class="l">API 6A material · temperatura</div></div></div></section>`;
+
+  // ISO 15156
+  h += `<div class="grid2"><section class="sheet"><h3>H₂S y servicio agrio</h3>
+   <p>pH₂S = P × y<sub>H₂S</sub> = ${fmt(ei.P, 1)} bar × ${fmt(ei.H2S, 4)} % = <b>${fmt(pp.pH2S_kPa, 3)} kPa</b>. ${r.sour ? `Supera ${fmt(cv.sourKPa.v, 1)} kPa: <b>servicio agrio</b>.` : `Por debajo de ${fmt(cv.sourKPa.v, 1)} kPa: región 0 de ISO 15156-2.`}</p>
+   ${r.sour ? `<div class="note">El simulador aplica la Opción 1 de ISO 15156-2 (aceros del Anexo A.2, válidos en todas las regiones SSC). Para usar la Opción 2 hay que ubicar el punto (pH₂S, pH in situ = ${fmt(ei.pH, 1)}) en la Figura 1 de ISO 15156-2.</div>` : ""}
+   ${r.sour && !r.wet.wet ? `<div class="note warn">Aunque esté seco, ISO 21457 §6.2.2.4 no permite relajar el requisito sour por deshidratación o inhibición.</div>` : ""}
+   <p class="small">${esc(r.regimen.t)}</p>
+   <p class="small"><b>API 6A (comparativa):</b> pCO₂ ${fmt(pp.pCO2_MPa, 3)} MPa → ${r.api6a.corrTxt} (Tabla A.1). Clase de material <b>${r.api6a.clase}</b> (Tabla 3)${r.sour ? `, marcada como ${esc(r.api6a.marca)}` : ""}. Clase de temperatura <b>${r.api6a.tclase ? `${r.api6a.tclase.c} (${r.api6a.tclase.min} a ${r.api6a.tclase.max} °C)` : "ninguna cubre el rango"}</b> (Tabla 2).</p></section>`;
+
+  // Corrosión
+  h += `<section class="sheet"><h3>Corrosión interna del acero al carbono</h3>`;
+  if (r.corr.aplica) {
+    h += `<p class="small">${esc(r.wet.why)} Modelo ${esc(r.corr.modelo)}: V<sub>cr</sub> = ${fmt(r.corr.vcr, 2)} mm/a; factor de película ${fmt(r.corr.fs, 2)}; factor de glicol ${fmt(r.corr.fgly, 2)} → <b>${fmt(r.corr.crBase, 2)} mm/a sin inhibir</b>. Con ${fmt(r.corr.A * 100, 0)} % de disponibilidad de inhibidor (inhibida ${fmt(cv.crInh.v, 2)} mm/a, ISO 21457 §8.1) queda en <b>${fmt(r.corr.crEff, 2)} mm/a</b>.</p>
+     ${crChart(ei, r)}
+     <p>Pérdida en ${ei.vida} años: <b>${fmt(r.corr.caReq, 1)} mm</b> → ${st(r.corr.clase.t, ["ok", "warn", "warn", "bad"][r.corr.clase.k])} ${r.corr.clase.k < 3 ? `(sobreespesor ${fmt(r.corr.clase.ca, 1)} mm, ISO 21457 §8.2)` : `(más de ${fmt(cv.caSevere.v, 0)} mm: el CS desnudo no es viable; clad o CRA)`}</p>`;
+    const lim = cv.caSevere.v / ei.vida;
+    if (r.corr.crEff > lim) {
+      const need = r.corr.crBase > cv.crInh.v ? (r.corr.crBase - lim) / (r.corr.crBase - Math.min(cv.crInh.v, r.corr.crBase)) : 0;
+      h += `<div class="note">Para que el CS desnudo sea viable la corrosión efectiva debe bajar a ${fmt(lim, 2)} mm/a (${fmt(cv.caSevere.v, 0)} mm en ${ei.vida} años). ${cv.crInh.v < lim ? `Eso exige una disponibilidad de inhibidor de al menos ${fmt(Math.min(100, need * 100), 1)} %` : `Ni con 100 % de inhibidor se logra (la velocidad inhibida es ${fmt(cv.crInh.v, 2)} mm/a)`}; ISO 21457 §7.2.1 advierte que en gas húmedo/condensado la inhibición puede no ser práctica.</div>`;
+    }
+    if (r.regimen.k === "h2s") h += `<div class="note warn">Con H₂S dominante el modelo de CO₂ es conservador para la pérdida general; ISO 21457 §6.2.2.2 pide basar la picadura localizada en experiencia operacional.</div>`;
+  } else if (r.amina) {
+    h += `<p>El modelo de agua ácida no aplica a soluciones de amina. Severidad por criterios de literatura (editables): <b>${r.amina.nivel}</b>.</p>${r.amina.factores.length ? `<ul class="tight">${r.amina.factores.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : `<p class="small">Ningún factor supera su criterio.</p>`}<div class="note">Acero al carbono soldado en amina: PWHT obligatorio por agrietamiento alcalino (ISO 21457 §6.2.2.5; API RP 945).</div>`;
+  } else if (r.teg) {
+    h += `<p>Servicio de glicol: ISO 21457 Tabla 11 admite CS o 316; §7.4.4 recomienda 316 en intercambiadores y componentes críticos. Severidad: <b>${r.teg.nivel}</b>.</p>${r.teg.factores.length ? `<ul class="tight">${r.teg.factores.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : ""}`;
+  } else {
+    h += `<p>${esc(r.corr.txt || r.wet.why)}</p>`;
+  }
+  if (!S.aplica15156sol && (r.amina || r.teg)) h += `<div class="note warn">Los límites de ISO 15156-3 no se están aplicando a esta solución (opción en Criterios).</div>`;
+  h += `</section></div>`;
+
+  // Ranking
+  h += `<section class="sheet"><h3>Ranking de materiales candidatos para ${esc(FORMA_TXT[p.forma].toLowerCase())}</h3>${rankingHTML(r, p)}</section>`;
+  h += `<div class="grid2"><section class="sheet"><h3>Mecanismos de daño con estos datos</h3><table><tbody>${r.mecs.map(m => `<tr><td style="width:42%"><b>${esc(m.mec)}</b></td><td>${st(EST_TXT[m.est][0], EST_TXT[m.est][1])}<div class="small">${esc(m.why)}</div></td></tr>`).join("")}</tbody></table>
+   <p class="small" style="margin-top:8px"><b>Tabla 22 para ${esc(inp.corriente)}:</b> ${esc(MECH[inp.corriente] ? MECH[inp.corriente].J : "")}</p></section>
+   <section class="sheet"><h3>Origen de los datos de esta pieza</h3><p class="small">${esc(STREAMS[inp.corriente].nota)}</p><p class="small"><b>Material candidato del informe para la corriente:</b> ${esc(STREAMS[inp.corriente].material)}</p><p class="small"><b>Norma de consulta del inventario:</b> ${esc(p.norma)}</p></section></div>
+   <section class="sheet"><h3>Comparar dos materiales</h3>${compareHTML(r)}</section>`;
+  const ph = procHTML(e, p, ei, r);
+  if (ph) h += `<section class="sheet">${ph}</section>`;
+  const box = $("#results"); box.innerHTML = h;
+  const ca = $("#cmpA"), cb = $("#cmpB");
+  if (ca) { const a = r.mats.find(m => m.id === S.cmpA) || r.ranking[0]; const b = r.mats.find(m => m.id === S.cmpB) || r.ranking[1] || r.ranking[0]; ca.value = a.id; cb.value = b.id; ca.onchange = () => { S.cmpA = ca.value; save(); renderResults(); }; cb.onchange = () => { S.cmpB = cb.value; save(); renderResults(); }; }
+  box.querySelectorAll("[data-proc]").forEach(el => el.addEventListener("change", () => { const [k1, k2, f] = el.dataset.proc.split("|"); if (!isNaN(+el.value)) { S.proc[k1 + "|" + k2][f] = +el.value; save(); renderResults(); } }));
+  $("#addRep").onclick = () => { S.reporte.push(snapshot(S.eq, S.pieza)); save(); toast("Agregado al reporte (" + S.reporte.length + ")"); };
+  $("#toEsc").onclick = () => { S.esc = { eq: S.eq, pieza: S.pieza, base: JSON.parse(JSON.stringify(inp)), alt: JSON.parse(JSON.stringify(inp)), nombre: "Personalizado" }; save(); location.hash = "#escenarios"; };
+}
+
+/* -------------------- sellos -------------------- */
+function selloPreset(eqId, p) {
+  const sid = p.corriente; const s = STREAMS[sid];
+  const e = eqById(eqId);
+  const Tm = Math.max(...e.piezas.filter(x => x.forma !== "sello").map(x => { const i = getInputs(eqId, x.id); return +i.Tmax[0]; }));
+  return { eq: eqId, Tmin: s.Tmin[0], Tmax: Tm, P: s.P[0], H2S: s.H2S[0], CO2: s.CO2[0],
+    hc: ["hc_humedo", "gas_humedo", "gas_seco", "gas_acido", "vapor_acido"].includes(s.tipo) || ["E1-REC", "E1-SEP", "E2-ABS", "E3-CON"].includes(eqId),
+    aromat: ["hc_humedo"].includes(s.tipo) || eqId === "E3-REG", alc: s.tipo.startsWith("amina"), meoh: sid === "C01" || s.tipo === "hc_humedo",
+    agua: true, teg: s.tipo === "teg" || eqId.startsWith("E3") };
+}
+function viewSellos() {
+  if (!S.sello) S.sello = selloPreset("E1-SEP", pzById("E1-SEP", "sellos"));
+  const z = S.sello;
+  const ev = evalElastomers({ Tmin: z.Tmin, Tmax: z.Tmax, PMPa: z.P / 10, H2S: z.H2S, CO2: z.CO2, hc: z.hc, aromat: z.aromat, alc: z.alc, meoh: z.meoh, agua: z.agua, teg: z.teg }, S.crit);
+  const order = { ok: 0, cond: 1, no: 2 };
+  const res = ev.res.slice().sort((a, b) => order[a.estado] - order[b.estado] || b.tmax - a.tmax);
+  const pp = partialPressures(z.P, z.H2S, z.CO2, z.Tmax);
+  const sour = pp.pH2S_kPa >= S.crit.sourKPa.v;
+  const lvl = pp.pCO2_MPa < S.crit.co2Slight.v ? 0 : pp.pCO2_MPa <= S.crit.co2High.v ? 1 : 2;
+  const cls = sour ? ["DD", "EE", "FF"][lvl] : ["AA", "BB", "CC"][lvl];
+  const f2 = { AA: "AA/BB: 5 % CO₂ / 95 % CH₄", BB: "AA/BB: 5 % CO₂ / 95 % CH₄", CC: "CC: 80 % CO₂ / 20 % CH₄", DD: "DD/EE: 10 % H₂S / 5 % CO₂ / 85 % CH₄", EE: "DD/EE: 10 % H₂S / 5 % CO₂ / 85 % CH₄", FF: "FF/HH: 10 % H₂S / 80 % CO₂ / 10 % CH₄" }[cls];
+  const chk = (k, t) => `<label class="check"><input type="checkbox" data-sk="${k}" ${z[k] ? "checked" : ""}> ${t}</label>`;
+  const num = (k, t, step) => `<div class="field"><label>${t}</label><input type="number" step="${step}" data-sk="${k}" value="${z[k]}"></div>`;
+  return `<section class="sheet"><h1>Sellos elastoméricos · ISO 23936-2</h1><p class="lede">Cribado de compatibilidad con la Tabla C.1, riesgo de descompresión rápida de gas (RGD) y plan de calificación que pide la norma. Cargue las condiciones de un equipo o escríbalas.</p>
+  <div class="seg">${EQUIPOS.map(x => `<button data-seq="${x.id}" aria-pressed="${x.id === z.eq}"><b>${x.n}</b>${esc(x.corto)}</button>`).join("")}</div></section>
+  <div class="simwrap"><aside class="sheet form" id="sform"><h3>Condiciones del sello</h3>${num("Tmin", "T mínima (°C)", 1)}${num("Tmax", "T máxima (°C)", 1)}${num("P", "Presión de gas (bar)", 0.1)}${num("H2S", "H₂S (% mol)", "any")}${num("CO2", "CO₂ (% mol)", "any")}
+  <div class="fgroup"><h4>Fluidos en contacto</h4>${chk("hc", "Hidrocarburo / condensado")}${chk("aromat", "Con aromáticos (BTEX)")}${chk("alc", "Fluido alcalino (amina)")}${chk("meoh", "Metanol / MEG (columna MeOH de la Tabla C.1)")}${chk("agua", "Agua")}${chk("teg", "TEG")}</div></aside>
+  <div>
+  <section class="sheet"><h3>Compatibilidad (Tabla C.1)</h3><div class="tw"><table><thead><tr><th>Elastómero</th><th class="num">T máx. en aire</th><th>Resultado</th><th>Motivo</th></tr></thead><tbody>
+  ${res.map(x => `<tr class="${x.estado === "no" ? "excl" : ""}"><td><b>${x.id}</b><div class="small">${esc(x.desc)}</div></td><td class="num">${x.tmax} °C</td><td>${x.estado === "ok" ? st("Apto", "ok") : x.estado === "cond" ? st("Condicionado", "warn") : st("No apto", "bad")}</td><td class="small">${esc([...x.fails, ...x.conds].join("; ") || "Sin restricciones en la tabla")}</td></tr>`).join("")}
+  </tbody></table></div><p class="small">La Tabla C.1 es una guía; ISO 23936-2 recomienda caracterizar cada compuesto en su ambiente. El grupo aprobó HNBR para la ficha E1-10 de B3.</p></section>
+  <div class="grid2"><section class="sheet"><h3>Riesgo de RGD</h3><p>Presión ${fmt(z.P / 10, 2)} MPa → riesgo ${st(ev.rgd, ev.rgd === "alto" ? "bad" : ev.rgd === "medio" ? "warn" : "ok")} (Tabla F.1: crece por encima de ${S.crit.rgdLow.v}–${S.crit.rgdHigh.v} MPa; el CO₂ lo aumenta).</p>
+  <p class="small">Ensayo RGD (Anexo B): O-ring de 5,33 mm, mínimo 4 réplicas, gas B.1.i (10 % CO₂ / 90 % CH₄), 15 MPa, 100 °C, 68 h el primer ciclo, 8 ciclos, despresurización a 2 MPa/min. Acepta si ninguna sección supera la calificación 3 (§7.3.2). Certificar exige al menos 15 MPa y 100 °C${z.P / 10 > 15 || z.Tmax > 100 ? "; <b>el servicio los supera: ensayo a medida (bespoke)</b>" : ""}.</p></section>
+  <section class="sheet"><h3>Plan de envejecimiento (Anexo A)</h3><ul class="tight"><li><b>Gas:</b> ${esc(ev.medio)}</li><li><b>Líquido:</b> ${esc(ev.liq)}</li><li><b>Distribución:</b> ${esc(ev.multi)}</li><li><b>Clase de temperatura:</b> ${ev.tc ? `${ev.tc.c} (${ev.tc.min} a ${ev.tc.max} °C); ensayos a ${ev.tc.test} °C` : "ninguna clase estándar cubre el rango: temperaturas a medida"}</li><li><b>Aceptación (§7.2.2):</b> dureza +10/−20 (+5/−20 si la nominal es 90); volumen +25 %/−5 %; tracción ±50 %; vida por Arrhenius (Anexo D).</li></ul></section></div>
+  <section class="sheet"><h3>Comparación con API 6A Anexo F</h3><p>Con pH₂S ${fmt(pp.pH2S_kPa, 2)} kPa y pCO₂ ${fmt(pp.pCO2_MPa, 3)} MPa la clase equivalente es <b>${cls}</b>. Fluido de ensayo de sellos no metálicos (Tabla F.2): ${esc(f2)}, con 60 % de hidrocarburo líquido y 5 % de agua, a 6,9 MPa y la T máxima de la clase durante 160 h como mínimo.</p>
+  <div class="note">Termoplásticos (asientos, anillos antiextrusión, revestimientos): ISO 23936-1 queda pendiente porque el archivo adjunto con ese nombre es ISO 21457.</div></section>
+  </div></div>`;
+}
+function afterSellos() {
+  document.querySelectorAll("[data-seq]").forEach(b => b.addEventListener("click", () => { const e = eqById(b.dataset.seq); S.sello = selloPreset(e.id, e.piezas.find(x => x.forma === "sello") || e.piezas[0]); save(); render(); }));
+  document.querySelectorAll("[data-sk]").forEach(el => el.addEventListener(el.type === "checkbox" ? "change" : "change", () => { const k = el.dataset.sk; S.sello[k] = el.type === "checkbox" ? el.checked : +el.value; save(); render(); }));
+}
+
+/* -------------------- escenarios -------------------- */
+const PRESETS = [
+  ["cl", "Cloruros: año 1 vs año 8", (b, a) => { b.Cl = [600, "S"]; a.Cl = [28000, "D"]; }],
+  ["p", "Nivel B 50 bar vs Nivel A 320 bar", (b, a) => { b.P = [50, "S"]; a.P = [320, "D"]; }],
+  ["t", "T operación vs T máxima", (b, a) => { a.T = [Math.max(+b.Tmax[0], +b.T[0]), "D"]; }],
+  ["inh", "Sin inhibidor vs 95 % de disponibilidad", (b, a) => { b.inh = [0, "S"]; a.inh = [95, "U"]; }],
+  ["meg", "Sin MEG vs 50 % MEG en el agua", (b, a) => { b.wAgua = [100, "S"]; a.wAgua = [50, "U"]; }],
+  ["h2s", "H₂S residual 4 ppmv vs 50 ppmv", (b, a) => { b.H2S = [0.0004, "S"]; a.H2S = [0.005, "U"]; }]
+];
+function viewEscenarios() {
+  if (!S.esc) { const i = getInputs(S.eq, S.pieza); S.esc = { eq: S.eq, pieza: pzById(S.eq, S.pieza).forma === "sello" ? eqById(S.eq).piezas[0].id : S.pieza, base: JSON.parse(JSON.stringify(i)), alt: JSON.parse(JSON.stringify(i)), nombre: "Personalizado" }; }
+  const z = S.esc; const e = eqById(z.eq); const p = pzById(z.eq, z.pieza);
+  const rb = evaluate(engineInput(z.base, p), S.crit), ra = evaluate(engineInput(z.alt, p), S.crit);
+  const fields = [["P", "Presión (bar a)"], ["T", "T operación (°C)"], ["Tmax", "T máxima (°C)"], ["H2S", "H₂S (% mol)"], ["CO2", "CO₂ (% mol)"], ["pH", "pH"], ["Cl", "Cl⁻ (mg/L)"], ["wAgua", "Agua en fase acuosa (%)"], ["inh", "Inhibidor (%)"], ["vida", "Vida (años)"]];
+  const inpRow = ([k, t]) => `<tr><th>${t}</th><td><input type="number" step="any" data-ek="base|${k}" value="${z.base[k][0]}" style="width:110px"></td><td><input type="number" step="any" data-ek="alt|${k}" value="${z.alt[k][0]}" style="width:110px"></td></tr>`;
+  const out = [
+    ["pH₂S (kPa)", r => fmt(r.pp.pH2S_kPa, 3)], ["Servicio agrio", r => r.sour ? "Sí" : "No"], ["pCO₂ (bar)", r => fmt(r.pp.pCO2_bar, 3)],
+    ["API 6A material / temperatura", r => r.api6a.clase + " / " + (r.api6a.tclase ? r.api6a.tclase.c : "—")],
+    ["Corrosión CS sin inhibir (mm/a)", r => r.corr.aplica ? fmt(r.corr.crBase, 2) : "—"], ["Corrosión CS efectiva (mm/a)", r => r.corr.aplica ? fmt(r.corr.crEff, 2) : "—"],
+    ["Pérdida en la vida (mm)", r => r.corr.aplica ? fmt(r.corr.caReq, 1) : "—"], ["Clase de sobreespesor", r => r.corr.clase ? r.corr.clase.t : "—"],
+    ["Materiales viables", r => String(r.mats.filter(m => m.viable).length) + " de " + r.mats.length], ["Recomendado", r => r.mejor ? r.mejor.nombre : "Ninguno"],
+    ["Material de inventario", r => { const s = invStatus(p, r); return s ? s.t : "—"; }]
+  ];
+  return `<section class="sheet"><h1>Escenarios</h1><p class="lede">Compare la misma pieza en dos condiciones. Las diferencias se marcan en la tabla de resultados.</p>
+   <div class="btns"><label>Pieza <select id="escPz">${EQUIPOS.map(x => x.piezas.filter(y => y.forma !== "sello").map(y => `<option value="${x.id}|${y.id}" ${x.id === z.eq && y.id === z.pieza ? "selected" : ""}>${x.n}. ${esc(x.corto)} · ${esc(y.nombre)}</option>`).join("")).join("")}</select></label></div>
+   <div class="seg" style="margin-top:10px">${PRESETS.map(([k, t]) => `<button data-pre="${k}" aria-pressed="${z.nombre === t}">${t}</button>`).join("")}</div></section>
+   <div class="grid2"><section class="sheet"><h3>Condiciones</h3><table><thead><tr><th></th><th>Base</th><th>Alternativo</th></tr></thead><tbody>${fields.map(inpRow).join("")}
+   <tr><th>Agua libre</th><td><select data-ek="base|agua">${Object.entries(AGUA_TXT).map(([v, t]) => `<option value="${v}" ${z.base.agua[0] === v ? "selected" : ""}>${t}</option>`).join("")}</select></td><td><select data-ek="alt|agua">${Object.entries(AGUA_TXT).map(([v, t]) => `<option value="${v}" ${z.alt.agua[0] === v ? "selected" : ""}>${t}</option>`).join("")}</select></td></tr></tbody></table></section>
+   <section class="sheet"><h3>Resultados · ${esc(e.corto)}, ${esc(p.nombre.toLowerCase())}</h3><table><thead><tr><th></th><th>Base</th><th>Alternativo</th></tr></thead><tbody>
+   ${out.map(([t, f]) => { const a = f(rb), b = f(ra); return `<tr><th>${t}</th><td>${esc(a)}</td><td>${a !== b ? `<b>${esc(b)}</b> ${st("cambia", "warn")}` : esc(b)}</td></tr>`; }).join("")}
+   </tbody></table>
+   <h4 style="margin-top:12px">Tres primeros del ranking</h4><table><tbody><tr><th>Base</th><td>${rb.ranking.filter(m => m.viable).slice(0, 3).map(m => esc(m.nombre) + " (" + fmt(m.total, 1) + ")").join("<br>") || "Ninguno"}</td></tr><tr><th>Alternativo</th><td>${ra.ranking.filter(m => m.viable).slice(0, 3).map(m => esc(m.nombre) + " (" + fmt(m.total, 1) + ")").join("<br>") || "Ninguno"}</td></tr></tbody></table></section></div>`;
+}
+function afterEscenarios() {
+  $("#escPz").addEventListener("change", ev => { const [a, b] = ev.target.value.split("|"); const i = getInputs(a, b); S.esc = { eq: a, pieza: b, base: JSON.parse(JSON.stringify(i)), alt: JSON.parse(JSON.stringify(i)), nombre: "Personalizado" }; save(); render(); });
+  document.querySelectorAll("[data-pre]").forEach(btn => btn.addEventListener("click", () => {
+    const pr = PRESETS.find(x => x[0] === btn.dataset.pre); const i = getInputs(S.esc.eq, S.esc.pieza);
+    const b = JSON.parse(JSON.stringify(i)), a = JSON.parse(JSON.stringify(i)); pr[2](b, a);
+    S.esc.base = b; S.esc.alt = a; S.esc.nombre = pr[1]; save(); render();
+  }));
+  document.querySelectorAll("[data-ek]").forEach(el => el.addEventListener("change", () => { const [w, k] = el.dataset.ek.split("|"); S.esc[w][k] = k === "agua" ? [el.value, "U"] : [+el.value, "U"]; S.esc.nombre = "Personalizado"; save(); render(); }));
+}
+
+/* -------------------- criterios -------------------- */
+function viewCriterios() {
+  const ver = v => v === "si" ? st("Norma adjunta", "ok") : v === "parcial" ? st("Parcial", "warn") : v === "no" ? st("Por verificar", "bad") : st("Del grupo", "na");
+  return `<section class="sheet"><h1>Criterios de decisión</h1><p class="lede">Todos los umbrales que usa el simulador, con su fuente. Los marcados «por verificar» vienen de normas que no están adjuntas o de práctica de literatura: ajústelos cuando tengan el texto.</p>
+  <label class="check"><input type="checkbox" id="ap15156" ${S.aplica15156sol ? "checked" : ""}> Aplicar los límites de ISO 15156-3 también a soluciones de amina y TEG (criterio conservador). ISO 15156-1 incluye las plantas de tratamiento de gas en su alcance, pero esos límites se desarrollaron para agua producida ácida.</label>
+  <div class="tw" style="margin-top:10px"><table><thead><tr><th>Criterio</th><th class="num">Valor</th><th>Unidad</th><th>Fuente</th><th>Verificación</th></tr></thead><tbody>
+  ${Object.entries(S.crit).map(([k, c]) => `<tr><td>${esc(c.t)}</td><td class="num"><input type="number" step="any" data-ck="${k}" value="${c.v}" style="width:90px"></td><td>${esc(c.u)}</td><td class="small">${esc(c.src)}</td><td>${ver(c.ver)}</td></tr>`).join("")}
+  </tbody></table></div><div class="btns" style="margin-top:10px"><button class="btn" id="resetC">Restaurar criterios</button></div></section>
+  <section class="sheet"><h2>Materiales candidatos</h2><p>Costo relativo y facilidad de fabricación son índices didácticos editables (acero al carbono = 1). Los límites ISO 15156-3 se muestran como se cargaron.</p>
+  <div class="tw"><table><thead><tr><th>Material</th><th class="num">PREN</th><th class="num">Costo rel.</th><th class="num">Fabricación (0–10)</th><th>Formas</th><th>Límite ISO 15156-3</th><th>Atm. marina (Tabla 3)</th><th>Agua de mar (Tabla 10)</th></tr></thead><tbody>
+  ${MATERIALS.map(m => `<tr><td><b>${esc(m.nombre)}</b><div class="small">${esc(m.spec)}</div></td><td class="num">${m.comp ? fmt(computePREN(m.comp), 1) : "—"}</td><td class="num"><input type="number" step="0.5" data-mk="${m.id}|costo" value="${m.costo}" style="width:64px"></td><td class="num"><input type="number" step="1" min="0" max="10" data-mk="${m.id}|fab" value="${m.fab}" style="width:56px"></td><td class="small">${m.formas.map(f => FORMA_TXT[f]).join(", ")}</td><td class="small">${esc(m.lim15156.nota)}</td><td>${m.atmMar == null ? "—" : m.atmMar >= 999 ? "Sin límite" : m.atmMar + " °C"}</td><td>${m.aguaMar == null ? "No listado" : m.aguaMar + " °C"}</td></tr>`).join("")}
+  </tbody></table></div></section>`;
+}
+function afterCriterios() {
+  $("#ap15156").addEventListener("change", ev => { S.aplica15156sol = ev.target.checked; save(); toast("Criterio actualizado"); });
+  document.querySelectorAll("[data-ck]").forEach(el => el.addEventListener("change", () => { if (!isNaN(+el.value)) { S.crit[el.dataset.ck].v = +el.value; save(); toast("Criterio actualizado"); } }));
+  document.querySelectorAll("[data-mk]").forEach(el => el.addEventListener("change", () => { const [id, f] = el.dataset.mk.split("|"); S.mat[id] = S.mat[id] || {}; S.mat[id][f] = +el.value; applyMatOverrides(); save(); toast("Material actualizado"); }));
+  $("#resetC").addEventListener("click", () => { S.crit = JSON.parse(JSON.stringify(CRIT_DEFAULT)); S.mat = {}; S.aplica15156sol = true; MAT_BASE.forEach(b => { const m = matById(b.id); m.costo = b.costo; m.fab = b.fab; }); save(); render(); toast("Criterios restaurados"); });
+}
+
+function viewNormas() {
+  const est = x => x === "adjunta" ? st("Adjunta", "ok") : x.startsWith("adjunta") ? st("Adjunta · comparativa", "ok") : x === "FALTA" ? st("Archivo incorrecto", "bad") : st("No adjunta", "warn");
+  return `<section class="sheet"><h1>Normas y cómo se usan</h1><p class="lede">Cláusulas que el simulador aplica. Las tablas se leyeron de los PDF adjuntos; donde la norma no está adjunta, el valor queda marcado para verificar.</p></section>
+  ${NORMAS.map(n => `<section class="sheet"><h2>${esc(n.cod)} ${est(n.estado)}</h2><p>${esc(n.tit)}</p><ul class="tight">${n.usos.map(u => `<li>${esc(u)}</li>`).join("")}</ul></section>`).join("")}`;
+}
+
+/* -------------------- reporte -------------------- */
+function snapshot(eqId, pzId) {
+  const { p, inp, ei, r } = runPiece(eqId, pzId);
+  const e = eqById(eqId);
+  return { fecha: new Date().toLocaleString("es-CO"), eq: e.n + ". " + e.nombre, pieza: p.nombre, forma: FORMA_TXT[p.forma], corriente: inp.corriente + " · " + STREAMS[inp.corriente].nombre,
+    inv: p.invTxt, invSt: invStatus(p, r), dim: p.dim, norma: p.norma,
+    cond: { P: inp.P, T: inp.T, Tmax: inp.Tmax, Tmin: inp.Tmin, H2S: inp.H2S, CO2: inp.CO2, pH: inp.pH, Cl: inp.Cl, inh: inp.inh, vida: inp.vida, agua: inp.agua, wAgua: inp.wAgua },
+    pp: r.pp, sour: r.sour, corr: r.corr, amina: r.amina, teg: r.teg, api6a: r.api6a, mejor: r.mejor ? r.mejor.nombre : null, mejorReqs: r.mejor ? r.mejor.reqs : [],
+    rank: r.ranking.map(m => ({ n: m.nombre, v: m.viable, t: m.total, x: m.excl[0] || "" })), mecs: r.mecs };
+}
+function reportHTML(list) {
+  const cell = v => `${esc(fmt(v[0], Math.abs(v[0]) < 1 && v[0] !== 0 ? 4 : 1))}${tag(v[1])}`;
+  return list.map((s, i) => `<section><h2>${i + 1}. ${esc(s.eq)} — ${esc(s.pieza)}</h2>
+  <p class="small">${esc(s.forma)} · ${esc(s.dim)} · ${esc(s.norma)} · Corriente ${esc(s.corriente)} · ${esc(s.fecha)}</p>
+  <table><tbody><tr><th>Material de inventario</th><td>${esc(s.inv)} ${s.invSt ? st(s.invSt.t, s.invSt.k) : ""}</td></tr><tr><th>Recomendado</th><td><b>${esc(s.mejor || "Ningún candidato cumple")}</b>${s.mejorReqs.length ? `<ul class="tight">${s.mejorReqs.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : ""}</td></tr></tbody></table>
+  <h3>Condiciones</h3><table><tbody><tr><th>P (bar a)</th><td>${cell(s.cond.P)}</td><th>T oper / máx / mín (°C)</th><td>${cell(s.cond.T)} / ${cell(s.cond.Tmax)} / ${cell(s.cond.Tmin)}</td></tr><tr><th>H₂S / CO₂ (% mol)</th><td>${cell(s.cond.H2S)} / ${cell(s.cond.CO2)}</td><th>pH / Cl⁻ (mg/L)</th><td>${cell(s.cond.pH)} / ${cell(s.cond.Cl)}</td></tr><tr><th>Agua libre</th><td>${esc(AGUA_TXT[s.cond.agua[0]])}${tag(s.cond.agua[1])}</td><th>Inhibidor (%) / vida (años)</th><td>${cell(s.cond.inh)} / ${cell(s.cond.vida)}</td></tr></tbody></table>
+  <h3>Resultados</h3><table><tbody><tr><th>pH₂S</th><td>${fmt(s.pp.pH2S_kPa, 3)} kPa (${fmt(s.pp.pH2S_psia, 2)} psia) — ${s.sour ? "servicio agrio" : "no agrio"}</td></tr><tr><th>pCO₂</th><td>${fmt(s.pp.pCO2_bar, 3)} bar (${fmt(s.pp.pCO2_MPa, 3)} MPa) — API 6A: ${esc(s.api6a.corrTxt)}</td></tr>
+  <tr><th>API 6A (comparativa)</th><td>Clase ${s.api6a.clase}; temperatura ${s.api6a.tclase ? s.api6a.tclase.c : "—"}</td></tr>
+  <tr><th>Corrosión CS</th><td>${s.corr.aplica ? `${fmt(s.corr.crBase, 2)} mm/a sin inhibir; ${fmt(s.corr.crEff, 2)} mm/a efectiva; ${fmt(s.corr.caReq, 1)} mm en la vida → ${esc(s.corr.clase.t)}` : s.amina ? `Amina: severidad ${s.amina.nivel}. ${esc(s.amina.factores.join("; "))}` : s.teg ? `TEG: severidad ${s.teg.nivel}. ${esc(s.teg.factores.join("; "))}` : esc(s.corr.txt || "Sin fase acuosa")}</td></tr></tbody></table>
+  <h3>Ranking</h3><table><thead><tr><th>Material</th><th class="num">Puntaje</th><th>Estado / motivo</th></tr></thead><tbody>${s.rank.map(m => `<tr><td>${esc(m.n)}</td><td class="num">${fmt(m.t, 1)}</td><td>${m.v ? "Viable" : "Excluido: " + esc(m.x)}</td></tr>`).join("")}</tbody></table>
+  <h3>Mecanismos</h3><table><tbody>${s.mecs.map(m => `<tr><td>${esc(m.mec)}</td><td>${esc(EST_TXT[m.est][0])}</td><td class="small">${esc(m.why)}</td></tr>`).join("")}</tbody></table></section>`).join("");
+}
+function viewReporte() {
+  const list = S.reporte;
+  return `<section class="sheet noprint"><h1>Reporte</h1><p class="lede">Fichas de selección que usted agregó desde el simulador, o todas las piezas con los valores actuales.</p>
+  <div class="btns"><button class="btn pri" id="rpAll">Generar con todas las piezas</button><button class="btn" id="rpPrint">Imprimir o guardar PDF</button><button class="btn" id="rpHtml">Descargar HTML</button><button class="btn" id="rpCsv">Descargar CSV</button><button class="btn" id="rpCopy">Copiar texto</button><button class="btn" id="rpClear">Vaciar</button></div>
+  <p class="small">${list.length} ficha(s). En la vista previa de Claude la impresión y las descargas pueden estar bloqueadas; en GitHub Pages funcionan.</p></section>
+  <section class="sheet report" id="rep">${list.length ? `<h1>Selección de materiales · Planta B2</h1><p class="small">Universidad Industrial de Santander · Selección de materiales · Generado ${esc(new Date().toLocaleString("es-CO"))}. Resultados preliminares de una herramienta académica; los valores S y P son supuestos o pendientes.</p>` + reportHTML(list) : `<p>Todavía no hay fichas. Use «Agregar al reporte» en el simulador o genere el reporte con todas las piezas.</p>`}</section>`;
+}
+function download(name, text, type) {
+  try { const b = new Blob([text], { type }); const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500); toast("Descarga iniciada: " + name); }
+  catch (e) { toast("Este visor bloquea descargas; use Copiar texto"); }
+}
+function afterReporte() {
+  $("#rpAll").onclick = () => { S.reporte = []; EQUIPOS.forEach(e => e.piezas.forEach(p => { if (p.forma !== "sello") S.reporte.push(snapshot(e.id, p.id)); })); save(); render(); };
+  $("#rpClear").onclick = () => { S.reporte = []; save(); render(); };
+  $("#rpPrint").onclick = () => { try { window.print(); } catch (e) { toast("Este visor no permite imprimir; abra la página publicada en GitHub Pages"); } };
+  $("#rpHtml").onclick = () => { const css = document.querySelector("style").textContent; download("reporte_B2.html", `<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><title>Reporte B2</title><style>${css}</style></head><body><main><div class="sheet report">${$("#rep").innerHTML}</div></main></body></html>`, "text/html"); };
+  $("#rpCsv").onclick = () => {
+    const rows = [["Equipo", "Pieza", "Corriente", "Material inventario", "Estado inventario", "Recomendado", "pH2S kPa", "Agrio", "pCO2 bar", "CR sin inhibir mm/a", "CR efectiva mm/a", "Perdida vida mm", "API 6A"]];
+    S.reporte.forEach(s => rows.push([s.eq, s.pieza, s.corriente, s.inv, s.invSt ? s.invSt.t : "", s.mejor || "", s.pp.pH2S_kPa.toFixed(3), s.sour ? "Si" : "No", s.pp.pCO2_bar.toFixed(3), s.corr.aplica ? s.corr.crBase.toFixed(2) : "", s.corr.aplica ? s.corr.crEff.toFixed(2) : "", s.corr.aplica ? s.corr.caReq.toFixed(1) : "", s.api6a.clase]));
+    download("reporte_B2.csv", "﻿" + rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(";")).join("\n"), "text/csv");
+  };
+  $("#rpCopy").onclick = async () => { try { await navigator.clipboard.writeText($("#rep").innerText); toast("Reporte copiado"); } catch (e) { toast("No se pudo copiar"); } };
+}
+
+/* -------------------- enrutador -------------------- */
+const VIEWFN = { inicio: [viewInicio, afterInicio], equipos: [viewEquipos, afterEquipos], corrientes: [viewCorrientes, afterCorrientes], mecanismos: [viewMecanismos, () => { }], simulador: [viewSimulador, afterSimulador], sellos: [viewSellos, afterSellos], escenarios: [viewEscenarios, afterEscenarios], criterios: [viewCriterios, afterCriterios], normas: [viewNormas, () => { }], reporte: [viewReporte, afterReporte] };
+function current() { const h = location.hash.replace("#", ""); return VIEWFN[h] ? h : "inicio"; }
+function render() {
+  const v = current();
+  document.querySelectorAll("nav.tabs a").forEach(a => a.setAttribute("aria-current", a.dataset.v === v ? "page" : "false"));
+  const [fn, after] = VIEWFN[v];
+  $("main").innerHTML = fn();
+  after();
+}
+function init() {
+  load(); applyMatOverrides();
+  $("nav.tabs").innerHTML = VIEWS.map(([k, t]) => `<a href="#${k}" data-v="${k}">${t}</a>`).join("");
+  window.addEventListener("hashchange", () => { render(); window.scrollTo(0, 0); });
+  render();
+}
+document.addEventListener("DOMContentLoaded", init);
+
+</script>
+</body>
+</html>
