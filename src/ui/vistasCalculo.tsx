@@ -12,7 +12,8 @@ import { evaluarPieza, type EntradaPieza, type EvaluacionMaterial, type Resultad
 import type { Hallazgo } from '../engine/tipos';
 import { clavePieza } from '../state/store';
 import { AVISO_ACADEMICO, CampoNum, CampoSel, CampoSi, Chip, fmt, Hoja, Tabla, Verificado, type Tono } from './comunes';
-import { criteriosDe, entradaCon, origenCampo, seleccion } from './contexto';
+import { materialPorId } from '../data/materiales';
+import { criteriosDe, entradaCon, materialVigente, origenCampo, seleccion } from './contexto';
 import { Barras, FiguraSSC, Tornado } from './graficas';
 import type { PropsVista } from './vistasDatos';
 
@@ -95,7 +96,12 @@ export function Simulador({ estado, cambiar }: PropsVista): ReactNode {
       </Hoja>
     );
   }
-  const inv = r.materiales.find((m) => m.id === s.pieza.inv);
+  const vigente = materialVigente(estado, s);
+  const sel = r.materiales.find((m) => m.id === vigente.id);
+  const elegir = (id: string | null): void => {
+    const { [clave]: _, ...resto } = estado.materiales;
+    cambiar({ materiales: id && id !== s.pieza.inv ? { ...resto, [clave]: id } : resto });
+  };
   const c = r.corrosion;
   const torn = tornadoPieza(e, cv, c.aplica ? 'ca' : 'pH2S');
   const enReporte = estado.reporte.includes(clave);
@@ -162,9 +168,17 @@ export function Simulador({ estado, cambiar }: PropsVista): ReactNode {
           <p className="menor">{r.mejor ? r.mejor.spec : 'Revise las condiciones o amplíe la lista de materiales.'}</p>
         </div>
         <div>
-          <p className="menor">Material del inventario</p>
-          <p>{s.pieza.invTxt}</p>
-          {inv ? (inv.viable ? <Chip tono="ok">Viable con estos datos</Chip> : <Chip tono="mal">Excluido con estos datos</Chip>) : null}
+          <p className="menor">{vigente.reemplazado ? 'Material seleccionado (reemplaza al del inventario)' : 'Material seleccionado: el del inventario'}</p>
+          <p>{vigente.reemplazado ? <strong>{materialPorId(vigente.id!)?.nombre ?? vigente.id}</strong> : s.pieza.invTxt}</p>
+          <p>
+            {sel ? (sel.viable ? <Chip tono="ok">Viable con estos datos</Chip> : <Chip tono="mal">Excluido con estos datos</Chip>) : <Chip tono="neutro">No disponible en esta forma</Chip>}
+            {vigente.reemplazado ? <> <Chip tono="aviso">Reemplazado</Chip></> : null}
+          </p>
+          {vigente.reemplazado ? <p className="menor">Inventario: {s.pieza.invTxt}</p> : null}
+          <p className="botones">
+            {r.mejor && r.mejor.id !== vigente.id ? <button type="button" className="boton primario" onClick={() => elegir(r.mejor!.id)}>Reemplazar por el recomendado</button> : null}
+            {vigente.reemplazado ? <button type="button" className="boton" onClick={() => elegir(null)}>Volver al material del inventario</button> : null}
+          </p>
         </div>
       </section>
 

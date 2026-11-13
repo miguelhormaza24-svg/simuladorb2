@@ -15,7 +15,8 @@ import { presionesParciales } from '../engine/presiones';
 import { severidadSSC } from '../engine/ssc';
 import type { Estado } from '../state/store';
 import { AVISO_ACADEMICO, Chip, EtiquetaOrigen, Fuente, fmt, Hoja, Tabla, Verificado, type Tono } from './comunes';
-import { criteriosDe, resultadoDe, seleccion, TODAS_LAS_PIEZAS } from './contexto';
+import { materialPorId } from '../data/materiales';
+import { criteriosDe, materialVigente, reemplazarExcluidos, resultadoDe, seleccion, TODAS_LAS_PIEZAS } from './contexto';
 import { Diagrama, FiguraSSC } from './graficas';
 
 export interface PropsVista { estado: Estado; cambiar: (p: Partial<Estado>) => void }
@@ -70,25 +71,41 @@ export function Inicio({ estado, cambiar }: PropsVista): ReactNode {
 }
 
 /* ------------------------------ Equipos ----------------------------- */
-export function Equipos({ cambiar }: PropsVista): ReactNode {
+export function Equipos({ estado, cambiar }: PropsVista): ReactNode {
+  const pendientes = reemplazarExcluidos(estado);
+  const reemplazados = Object.keys(estado.materiales).length;
   return (
     <>
       <Hoja titulo="Equipos del alcance" nivel={1}>
-        <p className="entrada">Inventario del informe B2 (Tablas 8 a 12). Los materiales son candidatos de partida, no aprobados.</p>
+        <p className="entrada">Inventario del informe B2 (Tablas 8 a 12). Los materiales son candidatos de partida, no aprobados. La columna «Material seleccionado» dice si cumple con los datos actuales.</p>
+        <p className="botones">
+          <button type="button" className="boton primario" disabled={!pendientes.n} onClick={() => cambiar({ materiales: pendientes.materiales })}>Reemplazar por el recomendado las {pendientes.n} piezas que no cumplen</button>
+          <button type="button" className="boton" disabled={!reemplazados} onClick={() => cambiar({ materiales: {} })}>Volver todas al material del inventario</button>
+        </p>
+        <p className="menor">{reemplazados} pieza{reemplazados === 1 ? '' : 's'} con material reemplazado. El reemplazo es una selección de trabajo dentro del simulador: no modifica el inventario del informe.</p>
       </Hoja>
       {EQUIPOS.map((e) => (
         <Hoja key={e.id} titulo={`${e.n}. ${e.nombre}`}>
           <p>{e.funcion}</p>
           <p className="menor">Etapa {e.etapa}. Entra: {e.entradas.join(', ')}. Sale: {e.salidas.join(', ')}. Ø {fmt(e.dim.D)} m × {fmt(e.dim.L)} m; espesor {fmt(e.dim.e)} mm <EtiquetaOrigen o="I" /></p>
           <Tabla titulo={`Piezas de ${e.nombre}`}>
-            <thead><tr><th>Pieza</th><th>Corriente</th><th>Material del inventario</th><th>Dimensiones</th><th>Norma de consulta</th><th /></tr></thead>
+            <thead><tr><th>Pieza</th><th>Corriente</th><th>Material del inventario</th><th>Material seleccionado</th><th>Dimensiones</th><th>Norma de consulta</th><th /></tr></thead>
             <tbody>
-              {e.piezas.map((p) => (
+              {e.piezas.map((p) => {
+                const s = { equipo: e, pieza: p };
+                const v = materialVigente(estado, s);
+                const m = p.forma === 'sello' ? undefined : resultadoDe(estado, e.id, p.id).materiales.find((x) => x.id === v.id);
+                return (
                 <tr key={p.id}>
-                  <th scope="row">{p.nombre}</th><td>{p.corriente}{p.servicio ? ` / ${p.servicio}` : ''}</td><td>{p.invTxt}</td><td>{p.dim}</td><td>{p.norma}</td>
+                  <th scope="row">{p.nombre}</th><td>{p.corriente}{p.servicio ? ` / ${p.servicio}` : ''}</td><td>{p.invTxt}</td>
+                  <td>{p.forma === 'sello' ? <span className="menor">Ver Sellos</span> : <>
+                    {v.reemplazado ? <><strong>{materialPorId(v.id!)?.nombre}</strong> <Chip tono="aviso">Reemplazado</Chip></> : 'El del inventario'}{' '}
+                    {m ? (m.viable ? <Chip tono="ok">Viable</Chip> : <Chip tono="mal">Excluido</Chip>) : null}</>}</td>
+                  <td>{p.dim}</td><td>{p.norma}</td>
                   <td><button type="button" className="boton" onClick={() => cambiar({ vista: p.forma === 'sello' ? 'sellos' : 'simulador', eq: e.id, pz: p.id })}>{p.forma === 'sello' ? 'Evaluar sellos' : 'Simular'}</button></td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </Tabla>
         </Hoja>

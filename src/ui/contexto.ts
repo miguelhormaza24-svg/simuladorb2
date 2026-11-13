@@ -40,4 +40,26 @@ export function origenCampo(estado: Estado, s: Seleccion, campo: keyof EntradaPi
   return 'S';
 }
 
+/** Material vigente de una pieza: el elegido por el usuario o, si no hay, el del inventario. */
+export function materialVigente(estado: Estado, s: Seleccion): { id: string | undefined; reemplazado: boolean } {
+  const elegido = estado.materiales[clavePieza(s.equipo.id, s.pieza.id)];
+  return elegido && elegido !== s.pieza.inv ? { id: elegido, reemplazado: true } : { id: s.pieza.inv, reemplazado: false };
+}
+
+/**
+ * Reemplaza por el recomendado en todas las piezas cuyo material vigente queda
+ * excluido con los datos actuales. Devuelve el mapa nuevo y cuántas cambió.
+ */
+export function reemplazarExcluidos(estado: Estado): { materiales: Record<string, string>; n: number } {
+  const materiales = { ...estado.materiales };
+  let n = 0;
+  for (const s of TODAS_LAS_PIEZAS) {
+    if (s.pieza.forma === 'sello') continue;
+    const r = resultadoDe(estado, s.equipo.id, s.pieza.id);
+    const actual = r.materiales.find((m) => m.id === materialVigente(estado, s).id);
+    if (r.mejor && actual && !actual.viable) { materiales[clavePieza(s.equipo.id, s.pieza.id)] = r.mejor.id; n++; }
+  }
+  return { materiales, n };
+}
+
 export const TODAS_LAS_PIEZAS: Seleccion[] = EQUIPOS.flatMap((equipo) => equipo.piezas.map((pieza) => ({ equipo, pieza })));

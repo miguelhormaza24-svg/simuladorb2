@@ -36,6 +36,7 @@ export function Reporte({ estado, cambiar }: PropsVista): ReactNode {
               <section key={f.clave} className="hoja ficha">
                 <h2>{i + 1}. {f.equipo} — {f.pieza}</h2>
                 <p><strong>Corriente:</strong> {f.corriente}. <strong>Material del inventario:</strong> {f.materialInventario}</p>
+                <p><strong>Material seleccionado:</strong> {f.reemplazado ? `${f.materialSeleccionado} (reemplaza al del inventario)` : 'el del inventario'}. {f.seleccionadoViable == null ? null : f.seleccionadoViable ? <Chip tono="ok">Viable con estos datos</Chip> : <Chip tono="mal">Excluido con estos datos</Chip>}</p>
                 <p><strong>Recomendación:</strong> {r.mejor ? `${r.mejor.nombre} (${r.mejor.spec})` : 'ningún candidato de la lista es viable con estos datos'}.</p>
                 <ul className="datos-ficha">{f.entradas.map((d) => <li key={d.campo}>{d.campo}: {typeof d.valor === 'number' ? fmt(d.valor, 4) : d.valor} {d.unidad} <EtiquetaOrigen o={d.origen} /></li>)}</ul>
                 <p>pH₂S {fmt(r.pp.pH2S.kPa, 3)} kPa; pCO₂ {fmt(r.pp.pCO2.bar, 3)} bar; <Chip tono={r.ssc.region === 0 ? 'ok' : r.ssc.region === 3 ? 'mal' : 'aviso'}>Región SSC {r.ssc.region}</Chip>

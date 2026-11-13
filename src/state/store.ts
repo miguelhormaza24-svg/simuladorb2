@@ -19,25 +19,26 @@ export interface Estado {
   pz: string;
   /** cambios del usuario por pieza, con clave «equipo/pieza» */ cambios: Record<string, Partial<EntradaPieza>>;
   /** criterios editados */ criterios: Record<string, number>;
+  /** material elegido por pieza en reemplazo del inventario: «equipo/pieza» → id del material */ materiales: Record<string, string>;
   /** piezas agregadas al reporte */ reporte: string[];
   presetsA: string[];
   presetsB: string[];
 }
 
 export const ESTADO_INICIAL: Estado = {
-  vista: 'inicio', eq: 'E1-SEP', pz: 'virola', cambios: {}, criterios: {}, reporte: [],
+  vista: 'inicio', eq: 'E1-SEP', pz: 'virola', cambios: {}, criterios: {}, materiales: {}, reporte: [],
   presetsA: ['ano8', 'p50', 'inh0'], presetsB: ['ano8', 'p50', 'inh99'],
 };
 
 const CLAVE = 'simuladorb2:v2';
-type Datos = Pick<Estado, 'cambios' | 'criterios' | 'reporte' | 'presetsA' | 'presetsB'>;
+type Datos = Pick<Estado, 'cambios' | 'criterios' | 'materiales' | 'reporte' | 'presetsA' | 'presetsB'>;
 
 const aTexto = (d: Datos): string => btoa(unescape(encodeURIComponent(JSON.stringify(d)))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 const deTexto = (t: string): Partial<Datos> => JSON.parse(decodeURIComponent(escape(atob(t.replace(/-/g, '+').replace(/_/g, '/'))))) as Partial<Datos>;
 
 export function hashDe(e: Estado): string {
-  const d: Datos = { cambios: e.cambios, criterios: e.criterios, reporte: e.reporte, presetsA: e.presetsA, presetsB: e.presetsB };
-  const vacio = !Object.keys(d.cambios).length && !Object.keys(d.criterios).length && !d.reporte.length;
+  const d: Datos = { cambios: e.cambios, criterios: e.criterios, materiales: e.materiales, reporte: e.reporte, presetsA: e.presetsA, presetsB: e.presetsB };
+  const vacio = !Object.keys(d.cambios).length && !Object.keys(d.criterios).length && !Object.keys(d.materiales).length && !d.reporte.length;
   return `#/${e.vista}/${e.eq}/${e.pz}${vacio ? '' : `?d=${aTexto(d)}`}`;
 }
 
@@ -61,6 +62,7 @@ function sanear(d: Partial<Datos>): Partial<Datos> {
   const o: Partial<Datos> = {};
   if (d.cambios && typeof d.cambios === 'object') o.cambios = d.cambios;
   if (d.criterios && typeof d.criterios === 'object') o.criterios = d.criterios;
+  if (d.materiales && typeof d.materiales === 'object') o.materiales = d.materiales;
   if (Array.isArray(d.reporte)) o.reporte = d.reporte.filter((x) => typeof x === 'string');
   if (Array.isArray(d.presetsA)) o.presetsA = d.presetsA;
   if (Array.isArray(d.presetsB)) o.presetsB = d.presetsB;
