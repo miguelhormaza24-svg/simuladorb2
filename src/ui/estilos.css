@@ -121,20 +121,24 @@ figure { margin: 0; }
 .diagrama .linea { fill: none; stroke-width: 3; stroke-linejoin: round; stroke-linecap: round; }
 .linea.c-gas { stroke: var(--c-gas); } .linea.c-liq { stroke: var(--c-liq); } .linea.c-amina { stroke: var(--c-amina); }
 .linea.c-teg { stroke: var(--c-teg); } .linea.c-acido { stroke: var(--c-acido); } .linea.c-serv { stroke: var(--c-serv); }
-.diagrama .halo { fill: none; stroke: #fff; stroke-width: 7; }
+.diagrama .halo { fill: none; stroke: #fff; stroke-width: 7; stroke-linecap: butt; }
 .diagrama .flujo { fill: none; stroke: #fff; stroke-width: 1.4; stroke-dasharray: 2 14; opacity: .85; animation: fluir 1.6s linear infinite; }
 @keyframes fluir { to { stroke-dashoffset: -16; } }
-.diagrama .rotulo { font-size: 12px; font-weight: 700; fill: var(--tinta); paint-order: stroke; stroke: #fff; stroke-width: 3px; }
-.diagrama .nota { font-size: 11px; fill: var(--apagado); }
-.diagrama .destino rect { fill: #f3f6f8; stroke: var(--regla); stroke-dasharray: 4 3; }
-.diagrama .destino text { font-size: 11px; fill: var(--tinta2); }
+.diagrama .rotulo { font-size: 12px; font-weight: 700; fill: var(--tinta); paint-order: stroke; stroke: #fff; stroke-width: 3.5px; stroke-linejoin: round; }
+.diagrama .destino { font-weight: 400; fill: var(--tinta2); }
+.diagrama .suelo { fill: #f3f6f8; stroke: var(--regla); }
+.diagrama .malla { stroke: var(--regla2); stroke-width: 1; }
+.diagrama figcaption { margin-top: 6px; }
 .nodo { cursor: pointer; }
-.nodo rect { fill: #fff; stroke: var(--tinta); stroke-width: 1.5; }
-.nodo circle { fill: var(--tinta); } .nodo .num { fill: #fff; font-size: 11px; font-weight: 700; }
-.nodo text { font-size: 13px; font-weight: 600; fill: var(--tinta); }
-.nodo:hover rect { fill: #eef4fb; }
-.nodo.sel rect { fill: #dfeaf8; stroke: var(--acento); stroke-width: 3; }
-.nodo:focus-visible { outline: none; } .nodo:focus-visible rect { stroke: var(--foco); stroke-width: 4; }
+.nodo .cuerpo { fill: #dde5ec; stroke: var(--tinta); stroke-width: 1.5; stroke-linejoin: round; }
+.nodo .tapa { fill: #f6f9fb; stroke: var(--tinta); stroke-width: 1.5; }
+.nodo .pata { stroke: var(--tinta); stroke-width: 3; }
+.nodo .sello { fill: var(--tinta); stroke: #fff; stroke-width: 2; } .nodo .num { fill: #fff; font-size: 11px; font-weight: 700; }
+.nodo .nombre { font-size: 13px; font-weight: 700; fill: var(--tinta); paint-order: stroke; stroke: #fff; stroke-width: 3.5px; stroke-linejoin: round; }
+.nodo:hover .cuerpo { fill: #cddcec; }
+.nodo.sel .cuerpo { fill: #b9d2f2; stroke: var(--acento); stroke-width: 3; } .nodo.sel .tapa { fill: #e3eefb; stroke: var(--acento); stroke-width: 3; }
+.nodo.sel .sello { fill: var(--acento); }
+.nodo:focus-visible { outline: none; } .nodo:focus-visible .cuerpo { stroke: var(--foco); stroke-width: 4; }
 
 /* ----- gráficas ----- */
 .grafica { position: relative; }

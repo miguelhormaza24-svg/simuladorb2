@@ -31,89 +31,162 @@ function useGlobo(): { globo: ReactNode; sobre: (texto: string) => { onMouseMove
 }
 
 /* ------------------------------------------------------------------ */
-/* Diagrama de los ocho equipos                                        */
+/* Diagrama isométrico de los ocho equipos                             */
+/* Esquemático y sin escala. Coordenadas de planta (x, y) y altura z;  */
+/* x avanza con el proceso y la vista mira desde +x, +y y arriba.      */
 /* ------------------------------------------------------------------ */
-const NODOS: Record<string, [number, number, number, number]> = {
-  'E1-REC': [30, 150, 130, 64], 'E1-SEP': [210, 150, 130, 64], 'E2-ABS': [420, 105, 120, 135],
-  'E2-HX': [420, 318, 132, 58], 'E2-REG': [640, 286, 132, 94], 'E2-REH': [640, 410, 132, 58],
-  'E3-CON': [880, 105, 120, 135], 'E3-REG': [880, 318, 132, 72],
+type P3 = [number, number, number];
+type P2 = [number, number];
+const K = 26;
+const pr = ([x, y, z]: P3): P2 => [(x - y) * 0.866 * K, (x + y) * 0.5 * K - z * K];
+const cad = (pts: P2[]): string => pts.map(([a, b]) => `${a.toFixed(1)},${b.toFixed(1)}`).join(' ');
+
+/** Envolvente convexa (cadena monótona) para la silueta de un cilindro. */
+function envolvente(pts: P2[]): P2[] {
+  const p = [...pts].sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  const cruz = (o: P2, a: P2, b: P2): number => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+  const media = (lista: P2[]): P2[] => {
+    const h: P2[] = [];
+    for (const q of lista) {
+      while (h.length >= 2 && cruz(h[h.length - 2]!, h[h.length - 1]!, q) <= 0) h.pop();
+      h.push(q);
+    }
+    h.pop();
+    return h;
+  };
+  return [...media(p), ...media([...p].reverse())];
+}
+
+interface Cilindro { eje: 'x' | 'z'; a: P3; largo: number; r: number; nombre: P3; ancla?: 'start' | 'middle' | 'end' }
+
+function circulo(c: P3, r: number, eje: 'x' | 'z'): P2[] {
+  return Array.from({ length: 32 }, (_, i) => {
+    const t = (i / 32) * 2 * Math.PI;
+    const [u, v] = [r * Math.cos(t), r * Math.sin(t)];
+    return pr(eje === 'x' ? [c[0], c[1] + u, c[2] + v] : [c[0] + u, c[1] + v, c[2]]);
+  });
+}
+
+const extremo = (c: Cilindro): P3 => (c.eje === 'x' ? [c.a[0] + c.largo, c.a[1], c.a[2]] : [c.a[0], c.a[1], c.a[2] + c.largo]);
+
+const ISO: Record<string, Cilindro> = {
+  'E1-REC': { eje: 'x', a: [0, 0, 1.4], largo: 3, r: 0.8, nombre: [1.5, 0, 2.9] },
+  'E1-SEP': { eje: 'x', a: [5, 0, 1.4], largo: 4, r: 1, nombre: [7, 0, 3.1] },
+  'E2-ABS': { eje: 'z', a: [12.5, 0, 0], largo: 7, r: 0.9, nombre: [11, 0, 6.6], ancla: 'end' },
+  'E2-HX': { eje: 'x', a: [14, 4.5, 1], largo: 2.5, r: 0.6, nombre: [14.4, 6.9, 0], ancla: 'end' },
+  'E2-REG': { eje: 'z', a: [20, 4.5, 0], largo: 6, r: 0.8, nombre: [21.2, 4.5, 3.2], ancla: 'start' },
+  'E2-REH': { eje: 'x', a: [19, 8, 1], largo: 2.5, r: 0.65, nombre: [20.2, 9.3, -0.4] },
+  'E3-CON': { eje: 'z', a: [25, 0, 0], largo: 6.5, r: 0.85, nombre: [26.2, 0, 2.2], ancla: 'start' },
+  'E3-REG': { eje: 'z', a: [31.5, 4.5, 0], largo: 4, r: 0.6, nombre: [32.4, 4.5, 1.8], ancla: 'start' },
 };
 
 type ColorLinea = 'gas' | 'liq' | 'amina' | 'teg' | 'acido' | 'serv';
-const LINEAS: [string, ColorLinea, string, [number, number], boolean?][] = [
-  ['C01', 'gas', 'M0 182 H30', [0, 170]], ['C01', 'gas', 'M160 182 H210', [168, 172]],
-  ['C02', 'gas', 'M340 182 H372 V222 H420', [346, 172]], ['C03', 'liq', 'M290 214 V268', [296, 252]],
-  ['C04', 'liq', 'M250 214 V268', [212, 252]], ['C07', 'gas', 'M480 105 V72 H845 V222 H880', [600, 64]],
-  ['C05-R', 'amina', 'M470 240 V318', [478, 290]], ['C05-R', 'amina', 'M552 334 H640', [596, 326]],
-  ['C05-P', 'amina', 'M700 380 V410', [708, 400]], ['C05-P', 'amina', 'M640 446 H592 V362 H552', [598, 460]],
-  ['C05-P', 'amina', 'M490 376 V398 H575 V125 H540', [583, 160]], ['C06', 'acido', 'M700 286 V250', [708, 262]],
-  ['C13-W', 'serv', 'M806 304 H772', [778, 320], true], ['MC', 'serv', 'M830 438 H772', [790, 430], true],
-  ['C10', 'gas', 'M940 105 V72 H1160', [1010, 64]], ['C08-R', 'teg', 'M930 240 V318', [938, 290]],
-  ['C08-P', 'teg', 'M1012 372 H1048 V135 H1000', [1056, 260]], ['C09-V', 'acido', 'M880 336 H826 V292', [834, 352]],
-  ['C09-D', 'liq', 'M940 390 V430', [948, 422]],
+interface Tubo { id: string; c: ColorLinea; pts: P3[]; rot?: P3; ancla?: 'start' | 'middle' | 'end'; punteada?: boolean; destino?: string }
+
+const TUBOS: Tubo[] = [
+  { id: 'C01', c: 'gas', pts: [[-3.2, 0, 1.4], [0, 0, 1.4]], rot: [-2.4, 0, 2.2] },
+  { id: 'C01', c: 'gas', pts: [[3, 0, 1.4], [5, 0, 1.4]] },
+  { id: 'C02', c: 'gas', pts: [[9, 0, 1.4], [11.6, 0, 1.4]], rot: [10.4, 0, 2.2] },
+  { id: 'C04', c: 'liq', pts: [[5.8, 0.9, 0.5], [5.8, 3.6, 0.5]], rot: [5.8, 4.2, 0.5], ancla: 'end', destino: 'agua agria → B3' },
+  { id: 'C03', c: 'liq', pts: [[8, 0.9, 0.5], [8, 3.6, 0.5]], rot: [8, 4.2, 0.5], ancla: 'end', destino: 'condensado → etapa 5' },
+  { id: 'C07', c: 'gas', pts: [[12.5, 0, 7], [12.5, 0, 8], [23, 0, 8], [23, 0, 1.5], [24.15, 0, 1.5]], rot: [17.5, 0, 8.7] },
+  { id: 'C05-R', c: 'amina', pts: [[12.5, 0.9, 1], [12.5, 4.5, 1], [14, 4.5, 1]], rot: [12.2, 3, 1.2], ancla: 'end' },
+  { id: 'C05-R', c: 'amina', pts: [[16.5, 4.5, 1], [18, 4.5, 1], [18, 4.5, 4.5], [19.2, 4.5, 4.5]], rot: [17.7, 4.5, 3.2], ancla: 'end' },
+  { id: 'C05-P', c: 'amina', pts: [[20, 5.3, 0.8], [20, 7.35, 0.8]] },
+  { id: 'C05-P', c: 'amina', pts: [[19.2, 4.5, 0.3], [17.2, 4.5, 0.3], [17.2, 6, 0.3], [15.2, 6, 0.3], [15.2, 5.1, 0.3]], rot: [16.4, 6.7, 0.3], ancla: 'start' },
+  { id: 'C05-P', c: 'amina', pts: [[14.8, 4.5, 1.6], [14.8, 4.5, 2.6], [14.8, 0, 2.6], [14.8, 0, 5.8], [13.4, 0, 5.8]], rot: [15.2, 0, 4.6], ancla: 'start' },
+  { id: 'C06', c: 'acido', pts: [[20, 4.5, 6], [20, 4.5, 7], [20, 2, 7]], rot: [20, 1.7, 7.2], ancla: 'start', destino: 'gas ácido → B3' },
+  { id: 'C13-W', c: 'serv', pts: [[22.4, 4.5, 5.2], [20.8, 4.5, 5.2]], rot: [22.7, 4.5, 5.2], ancla: 'start', punteada: true },
+  { id: 'MC', c: 'serv', pts: [[23, 8, 1], [21.5, 8, 1]], rot: [23.3, 8, 1], ancla: 'start', punteada: true, destino: 'calentamiento' },
+  { id: 'C10', c: 'gas', pts: [[25, 0, 6.5], [25, 0, 7.4], [29.5, 0, 7.4]], rot: [29.8, 0, 7.4], ancla: 'start', destino: 'gas seco → etapa 4' },
+  { id: 'C08-R', c: 'teg', pts: [[25, 0.85, 0.6], [25, 4.5, 0.6], [30.9, 4.5, 0.6]], rot: [28.8, 4.5, 1.5] },
+  { id: 'C08-P', c: 'teg', pts: [[31.5, 3.9, 3], [31.5, 0, 3], [31.5, 0, 5.5], [25.85, 0, 5.5]], rot: [31.9, 0, 4.5], ancla: 'start' },
+  { id: 'C09-V', c: 'acido', pts: [[31.5, 4.5, 4], [31.5, 4.5, 5], [33.5, 4.5, 5]], rot: [33.8, 4.5, 5], ancla: 'start', destino: 'vapores → B3' },
+  { id: 'C09-D', c: 'liq', pts: [[31.5, 5.1, 0.3], [31.5, 7, 0.3]], rot: [31.5, 7.6, 0.3], ancla: 'end', destino: 'drenajes → B3' },
 ];
-const DESTINOS: [number, number, number, number, string[]][] = [
-  [196, 270, 150, 44, ['Agua agria → B3 (C04)', 'Condensado → etapa 5 (C03)']], [646, 208, 128, 40, ['Gas ácido → B3']],
-  [1060, 44, 114, 24, ['Gas seco → etapa 4']], [770, 262, 76, 28, ['Vapores → B3']], [892, 432, 98, 28, ['Drenajes → B3']],
-];
+
 const LEYENDA: [ColorLinea, string][] = [
   ['gas', 'Gas'], ['liq', 'Líquidos'], ['amina', 'Amina'], ['teg', 'TEG'], ['acido', 'Gas ácido y vapores'], ['serv', 'Servicio de B3 (punteado)'],
 ];
+const [SX0, SX1, SY0, SY1] = [-4, 37, -2.5, 10.5];
+const SUELO: P3[] = [[SX0, SY0, 0], [SX1, SY0, 0], [SX1, SY1, 0], [SX0, SY1, 0]];
 
-function partir(nombre: string): string[] {
-  const p = nombre.split(' ');
-  if (p.length < 2 || nombre.length < 12) return [nombre];
-  const m = Math.ceil(p.length / 2);
-  return [p.slice(0, m).join(' '), p.slice(m).join(' ')];
-}
+interface Capa { prof: number; nodo: ReactNode }
 
 export function Diagrama({ sel, alElegir }: { sel: string; alElegir: (eq: string) => void }): ReactNode {
   const tecla = (e: KeyboardEvent, id: string): void => {
     if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); alElegir(id); }
   };
+  const capas: Capa[] = [];
+  // Tuberías: cada tramo se ordena por profundidad (x + y) para que pase por detrás o por delante de los equipos.
+  TUBOS.forEach((t, i) => {
+    for (let j = 1; j < t.pts.length; j++) {
+      const [a, b] = [t.pts[j - 1]!, t.pts[j]!];
+      const d = `M${cad([pr(a)])} L${cad([pr(b)])}`;
+      capas.push({
+        prof: (a[0] + a[1] + b[0] + b[1]) / 2 + 0.02 * ((a[2] + b[2]) / 2),
+        nodo: (
+          <g key={`t${i}-${j}`}>
+            <path className="halo" d={d} />
+            <path className={`linea c-${t.c}`} d={d} strokeDasharray={t.punteada ? '5 4' : undefined} />
+            {t.punteada ? null : <path className="flujo" d={d} />}
+          </g>
+        ),
+      });
+    }
+  });
+  EQUIPOS.forEach((e) => {
+    const c = ISO[e.id]!;
+    const fin = extremo(c);
+    const cuerpo = envolvente([...circulo(c.a, c.r, c.eje), ...circulo(fin, c.r, c.eje)]);
+    const [nx, ny] = pr(c.nombre);
+    const [bx, by] = pr(c.eje === 'x' ? [c.a[0] + c.largo * 0.45, c.a[1], c.a[2]] : [c.a[0], c.a[1], c.a[2] + c.largo * 0.5]);
+    const patas = c.eje === 'x' ? [0.22, 0.78].map((f): [P2, P2] => [pr([c.a[0] + c.largo * f, c.a[1], c.a[2] - c.r * 0.9]), pr([c.a[0] + c.largo * f, c.a[1], 0])]) : [];
+    capas.push({
+      prof: c.eje === 'x' ? c.a[0] + c.largo / 2 + c.a[1] : c.a[0] + c.a[1],
+      nodo: (
+        <g
+          key={e.id} className={`nodo${e.id === sel ? ' sel' : ''}`} tabIndex={0} role="button"
+          aria-pressed={e.id === sel} aria-label={`${e.n}. ${e.nombre}`}
+          onClick={() => alElegir(e.id)} onKeyDown={(ev) => tecla(ev, e.id)}
+        >
+          {patas.map(([p, q], k) => <line key={k} className="pata" x1={p[0]} y1={p[1]} x2={q[0]} y2={q[1]} />)}
+          <polygon className="cuerpo" points={cad(cuerpo)} />
+          <polygon className="tapa" points={cad(circulo(fin, c.r, c.eje))} />
+          <circle className="sello" cx={bx} cy={by} r={10} />
+          <text className="num" x={bx} y={by + 4} textAnchor="middle">{e.n}</text>
+          <text className="nombre" x={nx} y={ny} textAnchor={c.ancla ?? 'middle'}>{e.corto}</text>
+        </g>
+      ),
+    });
+  });
+  capas.sort((a, b) => a.prof - b.prof);
+
+  const malla: ReactNode[] = [];
+  for (let x = SX0; x <= SX1; x += 2) { const [p, q] = [pr([x, SY0, 0]), pr([x, SY1, 0])]; malla.push(<line key={`x${x}`} className="malla" x1={p[0]} y1={p[1]} x2={q[0]} y2={q[1]} />); }
+  for (let y = SY0; y <= SY1; y += 2) { const [p, q] = [pr([SX0, y, 0]), pr([SX1, y, 0])]; malla.push(<line key={`y${y}`} className="malla" x1={p[0]} y1={p[1]} x2={q[0]} y2={q[1]} />); }
+
   return (
     <figure className="diagrama">
       <div className="tabla-scroll">
-        <svg viewBox="0 36 1180 440" role="group" aria-label="Diagrama de los ocho equipos del alcance y sus corrientes">
-          <g className="destino">
-            {DESTINOS.map(([x, y, w, h, t]) => (
-              <g key={`${x}-${y}`}>
-                <rect x={x} y={y} width={w} height={h} rx={4} />
-                {t.map((s, i) => <text key={s} x={x + 7} y={y + 17 + i * 17}>{s}</text>)}
-              </g>
-            ))}
-          </g>
-          {LINEAS.map(([id, c, d, [lx, ly], punteada], i) => (
-            <g key={`${id}-${i}`}>
-              <path className="halo" d={d} />
-              <path className={`linea c-${c}`} d={d} strokeDasharray={punteada ? '5 4' : undefined} />
-              {punteada ? null : <path className="flujo" d={d} />}
-              <text className="rotulo" x={lx} y={ly}>{id}</text>
-            </g>
-          ))}
-          {EQUIPOS.map((e) => {
-            const [x, y, w, h] = NODOS[e.id]!;
-            const lineas = partir(e.corto);
+        <svg viewBox="-340 -110 1250 745" role="group" aria-label="Vista isométrica de los ocho equipos del alcance y sus corrientes">
+          <polygon className="suelo" points={cad(SUELO.map(pr))} />
+          {malla}
+          {capas.map((c) => c.nodo)}
+          {TUBOS.map((t, i) => {
+            if (!t.rot) return null;
+            const [x, y] = pr(t.rot);
             return (
-              <g
-                key={e.id} className={`nodo${e.id === sel ? ' sel' : ''}`} tabIndex={0} role="button"
-                aria-pressed={e.id === sel} aria-label={`${e.n}. ${e.nombre}`}
-                onClick={() => alElegir(e.id)} onKeyDown={(ev) => tecla(ev, e.id)}
-              >
-                <rect x={x} y={y} width={w} height={h} rx={6} />
-                <circle cx={x + 15} cy={y + 15} r={10} />
-                <text className="num" x={x + 15} y={y + 19} textAnchor="middle">{e.n}</text>
-                {lineas.map((t, i) => (
-                  <text key={t} x={x + w / 2 + 8} y={y + h / 2 + 4 + (i - (lineas.length - 1) / 2) * 16} textAnchor="middle">{t}</text>
-                ))}
-              </g>
+              <text key={`r${i}`} className="rotulo" x={x} y={y + 4} textAnchor={t.ancla ?? 'middle'}>
+                {t.id}{t.destino ? <tspan className="destino"> · {t.destino}</tspan> : null}
+              </text>
             );
           })}
-          <text className="nota" x={4} y={232}>desde la válvula de llegada</text>
         </svg>
       </div>
-      <figcaption className="leyenda">
-        {LEYENDA.map(([c, t]) => <span key={c}><i className={`muestra c-${c}`} />{t}</span>)}
+      <figcaption>
+        <span className="leyenda">{LEYENDA.map(([c, t]) => <span key={c}><i className={`muestra c-${c}`} />{t}</span>)}</span>
+        <span className="menor bloque">Vista isométrica esquemática, sin escala. La posición de los equipos no representa la distribución real de la planta.</span>
       </figcaption>
     </figure>
   );
