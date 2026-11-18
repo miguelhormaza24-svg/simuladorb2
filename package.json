@@ -11,7 +11,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "coverage": "vitest run --coverage",
-    "validacion": "vitest run src/engine/validacion.test.ts --reporter=verbose"
+    "validacion": "vitest run src/engine/validacion.test.ts --reporter=verbose",
+    "build:html": "node scripts/un-solo-html.mjs"
   },
   "devDependencies": {
     "@types/react": "^19.3.0",

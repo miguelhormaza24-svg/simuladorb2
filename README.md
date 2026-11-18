@@ -53,6 +53,19 @@ npm run build
 npm run preview
 ```
 
+## Versión en un solo archivo HTML
+
+Para unirlo con los simuladores de B1 y B3, o abrirlo sin internet:
+
+```bash
+npm run build:html
+```
+
+Genera `simulador-b2.html` en la raíz: JavaScript y estilos incrustados, sin
+dependencias externas. Se abre con doble clic. Para integrarlo con otros
+simuladores, lo más seguro es cargarlo en un `<iframe>`, porque así sus
+estilos y su navegación por `#` no chocan con los de las otras páginas.
+
 ## Cómo desplegarlo
 
 1. En GitHub, abra Settings → Pages y elija «GitHub Actions» como fuente.
